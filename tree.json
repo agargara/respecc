@@ -1,0 +1,142 @@
+{
+  "nodes": {
+    "0": {
+      "cost": 0,
+      "text": {
+        "en": "Gain 1 SP"
+      },
+      "area": "Ground",
+      "unlocks": [
+        -1,
+        1
+      ],
+      "hidden": false
+    },
+    "1": {
+      "cost": 1,
+      "text": {
+        "en": "Gain 2 SP"
+      },
+      "area": "trunk",
+      "unlocks": [20,21],
+      "hidden": true
+    },
+    "20": {
+      "cost": 2,
+      "text": {
+        "en": "Gain 3 SP"
+      },
+      "area": "trunk",
+      "unlocks": [30,31],
+      "hidden": true
+    },
+    "21": {
+      "cost": 2,
+      "text": {
+        "en": "Gain 1 fig"
+      },
+      "area": "figs",
+      "unlocks": [32,33],
+      "hidden": true
+    },
+    "30": {
+      "cost": 4,
+      "text": {
+        "en": "Gain 4 SP"
+      },
+      "area": "trunk",
+      "unlocks": [],
+      "hidden": true
+    },
+    "31": {
+      "cost": 4,
+      "text": {
+        "en": "Gain 1 SP per activated node"
+      },
+      "area": "trunk",
+      "unlocks": [],
+      "hidden": true
+    },
+    "32": {
+      "cost": 4,
+      "text": {
+        "en": "Gain 2 figs"
+      },
+      "area": "figs",
+      "unlocks": [],
+      "hidden": true
+    },
+    "33": {
+      "cost": 4,
+      "text": {
+        "en": "Unlock fig→SP conversion"
+      },
+      "area": "figs",
+      "unlocks": [],
+      "hidden": true
+    },
+    "-33": {
+      "cost": 4,
+      "text": {
+        "en": "Worms decrease SP cost of all underground nodes"
+      },
+      "area": "worms",
+      "unlocks": [],
+      "hidden": true
+    },
+    "-32": {
+      "cost": 4,
+      "text": {
+        "en": "Gain 2 worms"
+      },
+      "area": "worms",
+      "unlocks": [],
+      "hidden": true
+    },
+    "-31": {
+      "cost": 4,
+      "text": {
+        "en": "Gain 0.5 SP per activated node on respec"
+      },
+      "area": "roots",
+      "unlocks": [],
+      "hidden": true
+    },
+    "-30": {
+      "cost": 4,
+      "text": {
+        "en": "Gain 3 SP on respec"
+      },
+      "area": "roots",
+      "unlocks": [],
+      "hidden": true
+    },
+    "-21": {
+      "cost": 2,
+      "text": {
+        "en": "Gain 1 worm"
+      },
+      "area": "worms",
+      "unlocks": [-32,-33],
+      "hidden": true
+    },
+    "-20": {
+      "cost": 2,
+      "text": {
+        "en": "Gain 2 SP on respec"
+      },
+      "area": "trunk",
+      "unlocks": [-30,-31],
+      "hidden": true
+    },
+    "-1": {
+      "cost": 1,
+      "text": {
+        "en": "Gain 1 SP on respec"
+      },
+      "area": "trunk",
+      "unlocks": [-20,-21],
+      "hidden": true
+    }
+  }
+}

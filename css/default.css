@@ -5,32 +5,11 @@ body{
   font-family: sans-serif;
   align-items: center;
   justify-content: center;
+  flex-direction: column;
 }
 
-#container{
-  overflow: hidden;
-  max-width: 80%;
+#game_area{
+  max-width: 80vw;
   max-height: 80vh;
   border: 1px solid #444;
-}
-
-#tree{
-  user-select: none;
-  padding: 16px;
-  margin: 0;
-  border: 10px solid green;
-  width: 3000px;
-}
-
-.node{
-  display: inline-flex;
-  width: 100px;
-  height: 100px;
-  border: 1px solid #F1E7C3;
-  margin: 8px;
-  border-radius: 50%;
-  justify-content: center;
-  align-content: center;
-  text-align: center;
-  flex-direction: column;
 }
