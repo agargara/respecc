@@ -1,141 +1,219 @@
 {
   "nodes": {
     "0": {
+      "pos": [
+        0,
+        0
+      ],
       "cost": 0,
       "text": {
-        "en": "Gain 1 SP"
+        "en": "Gain\n1 SP"
       },
       "area": "Ground",
       "unlocks": [
-        -1,
-        1
+        1,
+        2
       ],
       "hidden": false
     },
     "1": {
+      "pos": [
+        0,
+        -1
+      ],
       "cost": 1,
       "text": {
-        "en": "Gain 2 SP"
+        "en": "Gain\n2 SP"
       },
       "area": "trunk",
-      "unlocks": [20,21],
+      "unlocks": [
+        3,
+        5
+      ],
       "hidden": true
     },
-    "20": {
+    "2": {
+      "pos": [
+        0,
+        1
+      ],
+      "cost": 1,
+      "text": {
+        "en": "Gain\n1 SP\non respec"
+      },
+      "area": "trunk",
+      "unlocks": [
+        4,
+        6
+      ],
+      "hidden": true
+    },
+    "3": {
+      "pos": [
+        -1,
+        -2
+      ],
       "cost": 2,
       "text": {
-        "en": "Gain 3 SP"
+        "en": "Gain\n3 SP"
       },
       "area": "trunk",
-      "unlocks": [30,31],
+      "unlocks": [
+        7,
+        9
+      ],
       "hidden": true
     },
-    "21": {
+    "4": {
+      "pos": [
+        -1,
+        2
+      ],
       "cost": 2,
       "text": {
-        "en": "Gain 1 fig"
+        "en": "Gain\n2 SP\non respec"
       },
-      "area": "figs",
-      "unlocks": [32,33],
+      "area": "trunk",
+      "unlocks": [
+        8,
+        10
+      ],
       "hidden": true
     },
-    "30": {
+    "5": {
+      "pos": [
+        1,
+        -2
+      ],
+      "cost": 2,
+      "text": {
+        "en": "Gain\n1 fig"
+      },
+      "area": "figs",
+      "unlocks": [
+        11,
+        13
+      ],
+      "hidden": true
+    },
+    "6": {
+      "pos": [
+        1,
+        2
+      ],
+      "cost": 2,
+      "text": {
+        "en": "Gain\n1 worm"
+      },
+      "area": "worms",
+      "unlocks": [
+        12,
+        14
+      ],
+      "hidden": true
+    },
+    "7": {
+      "pos": [
+        -2,
+        -3
+      ],
       "cost": 4,
       "text": {
-        "en": "Gain 4 SP"
+        "en": "Gain\n4 SP"
       },
       "area": "trunk",
       "unlocks": [],
       "hidden": true
     },
-    "31": {
+    "8": {
+      "pos": [
+        -2,
+        3
+      ],
       "cost": 4,
       "text": {
-        "en": "Gain 1 SP per activated node"
-      },
-      "area": "trunk",
-      "unlocks": [],
-      "hidden": true
-    },
-    "32": {
-      "cost": 4,
-      "text": {
-        "en": "Gain 2 figs"
-      },
-      "area": "figs",
-      "unlocks": [],
-      "hidden": true
-    },
-    "33": {
-      "cost": 4,
-      "text": {
-        "en": "Unlock fig→SP conversion"
-      },
-      "area": "figs",
-      "unlocks": [],
-      "hidden": true
-    },
-    "-33": {
-      "cost": 4,
-      "text": {
-        "en": "Worms decrease SP cost of all underground nodes"
-      },
-      "area": "worms",
-      "unlocks": [],
-      "hidden": true
-    },
-    "-32": {
-      "cost": 4,
-      "text": {
-        "en": "Gain 2 worms"
-      },
-      "area": "worms",
-      "unlocks": [],
-      "hidden": true
-    },
-    "-31": {
-      "cost": 4,
-      "text": {
-        "en": "Gain 0.5 SP per activated node on respec"
+        "en": "Gain\n3 SP on respec"
       },
       "area": "roots",
       "unlocks": [],
       "hidden": true
     },
-    "-30": {
+    "9": {
+      "pos": [
+        -1,
+        -3
+      ],
       "cost": 4,
       "text": {
-        "en": "Gain 3 SP on respec"
+        "en": "Gain\n1 SP per\nactive node"
+      },
+      "area": "trunk",
+      "unlocks": [],
+      "hidden": true
+    },
+    "10": {
+      "pos": [
+        -1,
+        3
+      ],
+      "cost": 4,
+      "text": {
+        "en": "Gain\n0.5 SP per\nactive node\non respec"
       },
       "area": "roots",
       "unlocks": [],
       "hidden": true
     },
-    "-21": {
-      "cost": 2,
+    "11": {
+      "pos": [
+        1,
+        -3
+      ],
+      "cost": 4,
       "text": {
-        "en": "Gain 1 worm"
+        "en": "Gain\n2 figs"
+      },
+      "area": "figs",
+      "unlocks": [],
+      "hidden": true
+    },
+    "12": {
+      "pos": [
+        1,
+        3
+      ],
+      "cost": 4,
+      "text": {
+        "en": "Gain\n2 worms"
       },
       "area": "worms",
-      "unlocks": [-32,-33],
+      "unlocks": [],
       "hidden": true
     },
-    "-20": {
-      "cost": 2,
+    "13": {
+      "pos": [
+        2,
+        -3
+      ],
+      "cost": 4,
       "text": {
-        "en": "Gain 2 SP on respec"
+        "en": "Unlock\nfig→SP\nconversion"
       },
-      "area": "trunk",
-      "unlocks": [-30,-31],
+      "area": "figs",
+      "unlocks": [],
       "hidden": true
     },
-    "-1": {
-      "cost": 1,
+    "14": {
+      "pos": [
+        2,
+        3
+      ],
+      "cost": 4,
       "text": {
-        "en": "Gain 1 SP on respec"
+        "en": "Worms decrease\nSP cost of all\n underground nodes"
       },
-      "area": "trunk",
-      "unlocks": [-20,-21],
+      "area": "worms",
+      "unlocks": [],
       "hidden": true
     }
   }

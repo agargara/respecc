@@ -1,23 +1,50 @@
-import { get } from './util.js'
+import {hit_circle, get_display_transform} from './util.js'
+import {draw_connection, draw_characters, draw_node} from './draw.js'
 
-var global_options={
+
+var options={
   'scale_min': 0.75,
   'scale_max': 1.5,
   'animation_speed': 2.0,
+  'reveal_all': true,
+  'max_travel_dist': 2,
+  'lang': 'en',
+  'node_size': 64,
+  'node_distance': 24,
+  'node_text_margin': 24,
+  'theme': {
+    'default': '#f00',
+    'bgcolor': '#1a1f1a',
+    'selected_node': '#f00',
+    'nodes': {
+      'link': '#fff',
+      'deactivated': '#9a9',
+      'activated': '#fff',
+      'selected': '#efe',
+      'text': '#000'
+    }
+  }
 }
-var theme = {
-  'bgcolor': '#1a1f1a',
-  'selected_node': '#f00'
-}
+characters = {}
 var canvas, ctx            // canvas and drawing context
 var vw, vh                 // viewport height/width
-var camera={x:0,y:0,z:1.0} // camera position
-var tree={}
-var redraw = false
+var tree
+var current_character
+var keys_pressed = {}
+var mouse = {
+  pos: {'x':0,'y':0,'z':0},
+  alt : false,
+  shift : false,
+  ctrl : false,
+  btn : 0,
+  over : false, // mouseover
+  btnmask : [1, 2, 4, 6, 5, 3]
+}
+var display_transform
 
 window.onload = function(){
   init_game()
-  init_ui()
+  init_listeners()
   animate()
 }
 
@@ -25,8 +52,16 @@ function init_game(){
   canvas = document.getElementById('game_screen')
   ctx = canvas.getContext('2d')
   resize()
-  // load tree svg
-  get('img/big_tree_test.svg', load_tree)
+  // load tree data
+  fetch('tree.json')
+    .then(function(response){
+      return response.json()
+    }).then(function(jsonresponse){
+      tree = jsonresponse
+      // load save data
+      // TODO save data format
+      load_save()
+    })
 }
 
 // resize canvas based on viewport
@@ -37,119 +72,186 @@ function resize(){
   canvas.height = vh*0.8
 }
 
-function load_tree(svg){
-  tree['svg'] = svg.documentElement
-  get_node_locations(svg)
-  let img = new Image()
-  let xml = (new XMLSerializer()).serializeToString(svg.documentElement)
-  img.src = 'data:image/svg+xml;base64,' + btoa(xml)
-  tree['image'] = img
-  img.onload = function() { redraw=true }
+// TODO load this stuff from a save file / browser cache
+function load_save(){
+  // Load tree node statuses
+  Object.values(tree.nodes).forEach(node => {
+    node.status = 'deactivated'
+    node.hidden = false
+    node.locked = false
+  })
+  // Load characters
+  let chara = new_character()
+  characters.arborist = chara
+  current_character = 'arborist'
 }
 
-function get_node_locations(svg){
-  tree['nodes'] = {}
-  let circles = svg.getElementsByTagName('circle')
-  let i = 0
-  Array.from(circles).forEach(function(circle) {
-    let id = 'node_'+i
-    i++
-    tree['nodes'][id] = {
-      'x': circle.getAttribute('cx'),
-      'y': circle.getAttribute('cy'),
-      'r': circle.getAttribute('r'),
-      'name': circle.getAttribute('id')
+function new_character(){
+  return {
+    'current_node': '0',
+    'class': 'arborist',
+    'color': '#ff0'
+  }
+}
+
+/*
+  [EVENT] event listeners (keyboard, mouse, resize, etc.)
+*/
+function init_listeners(){
+  window.addEventListener('resize', resize)
+  // get display transform to handle zoom and pan
+  display_transform = get_display_transform(ctx, canvas, mouse)
+  // listen for keyboard events
+  document.addEventListener('keydown', function (e) {
+    keys_pressed[e.key] = true
+    handle_keyboard_input()
+  })
+  document.addEventListener('keyup', function (e) {
+    keys_pressed[e.key] = false
+  })
+  // listen for mouse events
+  canvas.addEventListener('mousemove', mouse_move)
+  canvas.addEventListener('mousedown', mouse_move)
+  canvas.addEventListener('mouseup', mouse_move)
+  canvas.addEventListener('mouseout', mouse_move)
+  canvas.addEventListener('mouseover', mouse_move)
+  canvas.addEventListener('mousewheel', mouse_move)
+  canvas.addEventListener('DOMMouseScroll', mouse_move) // firefox
+  canvas.addEventListener('contextmenu', function (e) {
+    e.preventDefault()
+  }, false)
+}
+
+// Take action based on which keys are pressed.
+function handle_keyboard_input(){
+  // determine angle based on combination of wasd
+  let dx = 0, dy = 0
+  if (keys_pressed.w){ dy += -1 }
+  if (keys_pressed.s){ dy += 1 }
+  if (keys_pressed.a){ dx += -1 }
+  if (keys_pressed.d){ dx += 1 }
+  let angle = Math.atan2(dy, dx)
+
+  // find closest unlocked node in direction
+  let current_node = tree.nodes[characters[current_character]['current_node']]
+  let closest_distance = 9999
+  let closest_angle = 10
+  let closest_node_id = null
+  let pos = current_node.pos
+  Object.entries(tree.nodes).forEach(([k,node]) => {
+    // skip self
+    if (k == characters[current_character]['current_node']) return
+    dy = node.pos[1] - pos[1]
+    dx = node.pos[0] - pos[0]
+    let angle2 = Math.atan2(dy, dx)
+    let diff = Math.abs(Math.atan2(Math.sin(angle2-angle), Math.cos(angle2-angle)))
+    let dist = Math.sqrt(dx * dx + dy * dy)
+    // Only allow traveling to nodes less than 90 degrees away
+    if (diff < Math.PI*0.5 && dist <= closest_distance && dist < options.max_travel_dist){
+      // Don't allow ties
+      if (closest_angle == diff && closest_distance == dist){
+        closest_node_id = null
+      }else{
+        closest_angle = diff
+        closest_distance = dist
+        closest_node_id = k
+      }
     }
   })
-}
-
-function init_ui(){
-  // initialize zoom slider
-  var ui_zoom = document.getElementById('ui_zoom')
-  ui_zoom.addEventListener('input', function(){
-    camera['z'] = this.value
-    redraw = true
-  })
-  // set mouse move events
-  canvas.addEventListener('mousemove', e => {
-    let x = e.offsetX
-    let y = e.offsetY
-    hover_over(x, y)
-  })
+  if(closest_node_id != null){
+    characters[current_character]['current_node'] = closest_node_id
+  }
 }
 
 function hover_over(x, y){
   // hit detection for tree
-  if (!tree['nodes'])
+  if (!tree || !tree.nodes)
     return
-  Object.entries(tree['nodes']).forEach(([k,node]) => {
-    if(hit_circle(x, y, node['x'], node['y'], node['r'])){
-      node['selected'] = true
-      redraw = true
+  Object.values(tree.nodes).forEach(node => {
+    if(hit_circle(x, y, node.x, node.y, node.r)){
+      node.selected = true
     }else{
-      node['selected'] = false
+      node.selected = false
     }
   })
 }
 
-function hit_circle(x1, y1, x2, y2, r){
-  let dx = x1 - x2
-  let dy = y1 - y2
-  let distance = Math.sqrt(dx * dx + dy * dy)
-  if (distance < r)
-    return true
-  else
-    return false
-}
-
-function animate() {
-  requestAnimationFrame(animate)
-  if (redraw){
-    redraw = false
-    draw()
+function mouse_move(event) {
+  let x = event.offsetX
+  let y = event.offsetY
+  hover_over(x, y)
+  mouse.pos['x'] = x
+  mouse.pos['y'] = y
+  if (mouse.pos.x === undefined) {
+    mouse.pos.x = event.clientX
+    mouse.pos.y = event.clientY
+  }
+  mouse.alt = event.altKey
+  mouse.shift = event.shiftKey
+  mouse.ctrl = event.ctrlKey
+  if (event.type === 'mousedown') {
+    event.preventDefault()
+    mouse.btn |= mouse.btnmask[event.which-1]
+  } else if (event.type === 'mouseup') {
+    mouse.btn &= mouse.btnmask[event.which+2]
+  } else if (event.type === 'mouseout') {
+    mouse.btn = 0
+    mouse.over = false
+  } else if (event.type === 'mouseover') {
+    mouse.over = true
+  } else if (event.type === 'mousewheel') {
+    event.preventDefault()
+    mouse.pos.z = event.wheelDelta
+  } else if (event.type === 'DOMMouseScroll') { // Firefox
+    mouse.pos.z = -event.detail
   }
 }
+
+/*
+  [DRAW] drawing related functions
+*/
+function animate() {
+  requestAnimationFrame(animate)
+  draw()
+}
 function draw(){
+  // update the transform
+  display_transform.update()
+  // set home transform to clear the screem
+  display_transform.setHome()
   // draw background
   ctx.rect(0, 0, canvas.width, canvas.height)
-  ctx.fillStyle = theme['bgcolor']
+  ctx.fillStyle = options.theme.bgcolor
   ctx.fill()
   // draw tree
+  display_transform.setTransform()
   draw_tree()
 }
 
 function draw_tree(){
-  if (!tree['svg'])
+  if(!tree || !tree.nodes)
     return
-  let viewbox = tree['svg'].viewBox.baseVal
-  let w = viewbox['width']
-  let h = viewbox['height']
-  ctx.drawImage(tree['image'], camera['x'], camera['y'], camera['z']*w, camera['z']*h)
-  // highlight selected areas
-  Object.entries(tree['nodes']).forEach(([k,node]) => {
-    if(node['selected']){
-      draw_circle(node['x'], node['y'], node['r'], theme['selected_node'])
+  // get nodes to draw
+  let nodes_to_draw = []
+  Object.values(tree.nodes).forEach(node => {
+    if(options.reveal_all || node.hidden==false){
+      nodes_to_draw.push(node)
     }
   })
-}
+  // Draw connections between nodes
+  nodes_to_draw.forEach(node => {
+    node.unlocks.forEach(id => {
+      let neighbor = tree.nodes[id]
+      if(neighbor){
+        draw_connection(ctx, node, neighbor, options)
+      }
+    })
+  })
+  // Draw characters
+  draw_characters(ctx, characters, tree, options)
 
-function draw_circle(x, y, r, color){
-  ctx.beginPath()
-  ctx.arc(x, y, r, 0, 2 * Math.PI, false)
-  ctx.fillStyle = color
-  ctx.fill()
-}
-
-/* initialize zoom buttons
-  var btns = document.getElementsByClassName('btnzoom')
-  Array.from(btns).forEach(function(btn) {
-    btn.addEventListener('click', function(){init_zoom_btn(this)}, false)
+  // Draw nodes themselves
+  nodes_to_draw.forEach(node => {
+    draw_node(ctx, node, options)
   })
 }
-
-function init_zoom_btn(btn){
-  var scale = btn.getAttribute('data-scale')
-  camera['z'] = parseFloat(scale)
-  draw()
-}
-*/
