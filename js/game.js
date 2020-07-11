@@ -35,7 +35,7 @@ var options={
   'node_distance': 24,
   'node_text_margin': 24,
   'autopan': true,
-  'autopan_margin': 0.8,
+  'autopan_margin': 0.5,
   'theme': {
     'default': '#f00',
     'bgcolor': '#1a1f1a',
@@ -389,16 +389,22 @@ function autopan(){
   let y = pos[1] * 4 * d
   let w = canvas.width * 0.5
   let h = canvas.height * 0.5
-  // calculate distance from Œ˙a
+  // calculate distance from center
   let dx = x - display_transform.x - w
   let dy = y - display_transform.y - h
   let m = options.autopan_margin
-  // pan right
   if (dx > w*m){
-    display_transform.x = (-w*m)+x-w
+    // pan right
+    display_transform.x = (-w*m)-w+x
+  }else if (-dx > w*m){
+    // pan left
+    display_transform.x = w*m-w+x
   }
-  // pan down
   if (dy > h*m){
-    display_transform.y = (-h*m)+y-h
+    // pan down
+    display_transform.y = (-h*m)-h+y
+  }else if (-dy > h*m){
+    // pan up
+    display_transform.y = h*m-h+y
   }
 }
