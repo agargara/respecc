@@ -1,9 +1,10 @@
 /* TODO
   HIGH
-  autopan when selected node is far from center
   save/load
   autosave
   animations
+  permanent nodes
+  bugfix: autopan weird with zoom
 
   MEDIUM
   pan bugfix (mouse pan jumps sometimes??)
@@ -15,6 +16,7 @@
 import {hit_circle, get_display_transform, DefaultDict} from './util.js'
 import {draw_connection, draw_characters, draw_node} from './draw.js'
 import {tree} from './tree.js'
+import {characters} from './characters.js'
 
 var game = {}
 game.resources = {
@@ -23,9 +25,7 @@ game.resources = {
   'worms':  {'name': 'Worms', 'amount': 0}
 }
 game.unlocks = {}
-game.onrespec = {'resources': new DefaultDict(0), 'pre':[]}
-
-var options={
+game.options={
   'scale_min': 0.75,
   'scale_max': 1.5,
   'animation_speed': 2.0,
@@ -49,10 +49,12 @@ var options={
     }
   }
 }
-var characters = {}
+game.state = {
+  'current_character': 'arborist'
+}
+game.onrespec = {'resources': new DefaultDict(0), 'pre':[]}
 var canvas, ctx            // canvas and drawing context
 var vw, vh                 // viewport height/width
-var current_character
 var keys_pressed = {}
 var mouse = {
   pos: {'x':0,'y':0,'z':0},
@@ -75,37 +77,45 @@ function init_game(){
   canvas = document.getElementById('game_screen')
   ctx = canvas.getContext('2d')
   resize()
-  // TODO save data format
-  load_save()
+  load() // load save data
   update_hud()
 }
 
 /*
   [GAME] core game functions
 */
-// TODO load this stuff from a save file / browser cache
-function load_save(){
+function load(){
+  let save = localStorage.getItem('save')
+  if (save){
+    save = JSON.parse(save)
+    game.resources = save.resources
+    game.unlocks = save.unlocks
+    game.options = save.options
+    game.state = save.state
+    // TODO tree / characters state??
+  }
+
   // Load tree node statuses
   Object.values(tree.nodes).forEach(node => {
     node.status = 'deactivated'
     node.locked = true
   })
   tree.nodes['0'].locked = false
-  // Load characters
-  let chara = new_character()
-  characters.arborist = chara
-  current_character = 'arborist'
 }
 
-function new_character(){
-  return {
-    'current_node': '0',
-    'class': 'arborist',
-    'color': '#ff0',
-    'reset': function(){
-      this.current_node = '0'
-    }
+function save(){
+  let save = {
+    'state': game.state,
+    'resources': game.resources,
+    'unlocks': game.unlocks,
+    'options': game.options,
   }
+  localStorage.setItem('save',JSON.stringify(save))
+}
+
+
+function current_character(){
+  return characters[game.state.current_character]
 }
 
 function respec(){
@@ -115,9 +125,9 @@ function respec(){
   })
   // reset keys
   keys_pressed = {}
-  // reset characters
+  // reset character positions
   Object.values(characters).forEach((char) => {
-    char.reset()
+    char.current_node = char.start_node
   })
   // reset activated nodes
   Object.values(tree.nodes).forEach(node => {
@@ -141,10 +151,13 @@ function respec(){
 /*
   [NODE] node manipulation
 */
-// Check if node is activatable
-game.current_node = function(){
-  return tree.nodes[characters[current_character]['current_node']]
+function current_node_id(){
+  return current_character()['current_node']
 }
+function current_node(){
+  return tree.nodes[current_node_id()]
+}
+// Check if node is activatable
 function can_activate(node){
   if (game.resources.sp.amount < node.cost) return false
   return true
@@ -154,6 +167,10 @@ function unlock_neighbors(node){
     tree.nodes[id].locked = false
     tree.nodes[id].hidden = false
   })
+}
+// move current character to a node
+function move_to(node_id){
+  current_character()['current_node'] = node_id
 }
 
 /*
@@ -194,7 +211,7 @@ function handle_keyboard_input(){
   handle_movement()
   // Spacebar: activate current node
   if (keys_pressed[' ']){
-    let n = game.current_node()
+    let n = current_node()
     if (n.status == 'deactivated' && can_activate(n)){
       // update cost
       game.resources.sp.amount -= n.cost
@@ -231,14 +248,17 @@ function handle_movement(){
   let angle = Math.atan2(dy, dx)
 
   // find closest unlocked node in direction
-  let current_node = tree.nodes[characters[current_character]['current_node']]
+  let cn = current_node()
+  let cnid = current_node_id()
   let closest_distance = 9999
   let closest_angle = 10
   let closest_node_id = null
-  let pos = current_node.pos
+  let pos = cn.pos
+  // TODO optimize to only search neighbors?
+  // (would require keeping track of neighbors)
   Object.entries(tree.nodes).forEach(([k,node]) => {
     // skip self
-    if (k == characters[current_character]['current_node']) return
+    if (k == cnid) return
     // skip hidden and locked
     if (node.hidden || node.locked) return
     dy = node.pos[1] - pos[1]
@@ -247,7 +267,7 @@ function handle_movement(){
     let diff = Math.abs(Math.atan2(Math.sin(angle2-angle), Math.cos(angle2-angle)))
     let dist = Math.sqrt(dx * dx + dy * dy)
     // Only allow traveling to nodes less than 90 degrees away
-    if (diff < Math.PI*0.5 && dist <= closest_distance && dist < options.max_travel_dist){
+    if (diff < Math.PI*0.5 && dist <= closest_distance && dist < game.options.max_travel_dist){
       // Don't allow ties
       if (closest_angle == diff && closest_distance == dist){
         closest_node_id = null
@@ -259,7 +279,7 @@ function handle_movement(){
     }
   })
   if(closest_node_id != null){
-    characters[current_character]['current_node'] = closest_node_id
+    move_to(closest_node_id)
     // pan after movement
     autopan()
   }
@@ -323,7 +343,7 @@ function draw(){
   display_transform.setHome()
   // draw background
   ctx.rect(0, 0, canvas.width, canvas.height)
-  ctx.fillStyle = options.theme.bgcolor
+  ctx.fillStyle = game.options.theme.bgcolor
   ctx.fill()
   // draw tree
   display_transform.setTransform()
@@ -345,16 +365,16 @@ function draw_tree(){
     node.unlocks.forEach(id => {
       let neighbor = tree.nodes[id]
       if(neighbor && !neighbor.hidden){
-        draw_connection(ctx, node, neighbor, options)
+        draw_connection(ctx, node, neighbor, game.options)
       }
     })
   })
   // Draw characters
-  draw_characters(ctx, characters, tree, options)
+  draw_characters(ctx, characters, tree, game.options)
 
   // Draw nodes themselves
   nodes_to_draw.forEach(node => {
-    draw_node(ctx, node, options)
+    draw_node(ctx, node, game.options)
   })
 }
 
@@ -382,9 +402,9 @@ function resize(){
 
 // pan so that cursor is not too far from center
 function autopan(){
-  if (!options.autopan) return
-  let pos = game.current_node().pos
-  let d = options.node_distance
+  if (!game.options.autopan) return
+  let pos = current_node().pos
+  let d = game.options.node_distance
   let x = pos[0] * 6 * d
   let y = pos[1] * 4 * d
   let w = canvas.width * 0.5
@@ -392,7 +412,7 @@ function autopan(){
   // calculate distance from center
   let dx = x - display_transform.x - w
   let dy = y - display_transform.y - h
-  let m = options.autopan_margin
+  let m = game.options.autopan_margin
   if (dx > w*m){
     // pan right
     display_transform.x = (-w*m)-w+x

@@ -170,7 +170,7 @@ export var tree = {
         -1,
         -3
       ],
-      'cost': 4,
+      'cost': 6,
       'text': {
         'en': 'Gain\n1 SP per\nactive node'
       },
@@ -180,7 +180,7 @@ export var tree = {
       'onactivate': function(game){
         Object.values(tree.nodes).forEach(node => {
           if (node.status == 'activated' )
-            game.resources.sp.amount += 1
+            game.resources.sp.amount += 0.5
         })
       }
     },
