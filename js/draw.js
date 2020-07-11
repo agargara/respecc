@@ -68,6 +68,11 @@ export function draw_connection(ctx, node1, node2, options){
   ctx.quadraticCurveTo(x2, y1, x2, y2)
   let color = get_color(options.theme, 'nodes', 'link')
   ctx.strokeStyle = color
+  // dashed line if destination is locked
+  if (node2.locked)
+    ctx.setLineDash([6, 6])
+  else
+    ctx.setLineDash([])
   ctx.stroke()
 }
 
@@ -83,6 +88,7 @@ export function draw_node(ctx, node, options){
   draw_round_rect(ctx, x-w*0.5, y-h*0.5, w, h, h*0.5, true, false)
   let text = node.text[options.lang]
   if (text){
+    text = text+'\nCost: '+node.cost+' SP'
     draw_node_text(ctx, text, x, y, w-margin, options)
   }
 }
@@ -90,10 +96,11 @@ export function draw_node(ctx, node, options){
 function draw_node_text(ctx, text, x, y, max_width, options){
   ctx.fillStyle = get_color(options.theme, 'nodes', 'text')
   ctx.textAlign = 'center'
-  let lines = text.split('\n')
   let size = 12
   ctx.font = size + 'px sans-serif'
-  let yoffset = (lines.length-2) * size
+  let h = ctx.measureText('M').width
+  let lines = text.split('\n')
+  let yoffset = (lines.length*0.5*size)-h
   lines.forEach((line, i) => {
     ctx.fillText(line, x, y+(i*size)-yoffset)
   })
@@ -112,7 +119,6 @@ export function draw_characters(ctx, characters, tree, options){
     w+=8
     ctx.fillStyle = chara.color
     draw_round_rect(ctx, x-w*0.5, y-h*0.5, w, h, h*0.5, true, false)
-//    draw_circle(ctx, x, y, r+4, chara.color)
   })
 }
 

@@ -1,3 +1,11 @@
+export class DefaultDict {
+  constructor(defaultVal) {
+    return new Proxy({}, {
+      get: (target, name) => name in target ? target[name] : defaultVal
+    })
+  }
+}
+
 export function normalize(pos, scale=1.0) {
   let norm = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1])
   if (norm != 0) {
