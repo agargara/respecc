@@ -97,7 +97,7 @@ function init_game(){
 */
 function load(){
   let save = localStorage.getItem('save')
-  if (typeof save === 'object' && save !== null){
+  if (save && save !== null){
     save = JSON.parse(save)
     game.state = save.state
     game.resources = save.resources
@@ -105,6 +105,7 @@ function load(){
     game.options = save.options
     shallow_copy(save.tree, tree)
     shallow_copy(save.characters, characters)
+    debug(save)
   }
 
   // Load tree node statuses
@@ -438,6 +439,11 @@ function update_hud(){
     }
   })
   document.getElementById('resources').textContent = restxt
+}
+
+function debug(thing){
+// todo convert new lines?
+  document.getElementById('debug').textContent = JSON.stringify(thing)
 }
 
 // resize canvas based on viewport
