@@ -15,6 +15,22 @@ body{
 }
 
 #hud{
+  display: flex;
   width: 80vw;
   margin-bottom: 12px;
+  justify-content: space-between;
+}
+
+#resources{
+  text-align: left;
+}
+
+#status{
+  text-align: right;
+}
+
+.fadeout {
+  visibility: hidden;
+  opacity: 0;
+  transition: visibility 0s 2s, opacity 2s linear;
 }

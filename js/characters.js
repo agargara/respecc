@@ -3,6 +3,6 @@ export var characters = {
     'start_node': '0',
     'current_node': '0',
     'class': 'arborist',
-    'color': '#ff0'
+    'color': '#8E9B58' // moss green
   }
 }

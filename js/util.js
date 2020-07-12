@@ -5,7 +5,11 @@ export class DefaultDict {
     })
   }
 }
-
+export function shallow_copy(a, b){
+  Object.entries(a).forEach(([k, v]) => {
+    b[k] = v
+  })
+}
 export function normalize(pos, scale=1.0) {
   let norm = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1])
   if (norm != 0) {

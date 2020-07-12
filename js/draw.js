@@ -66,13 +66,16 @@ export function draw_connection(ctx, node1, node2, options){
   ctx.beginPath()
   ctx.moveTo(x1, y1)
   ctx.quadraticCurveTo(x2, y1, x2, y2)
-  let color = get_color(options.theme, 'nodes', 'link')
-  ctx.strokeStyle = color
+  let color
   // dashed line if destination is locked
-  if (node2.locked)
+  if (node2.locked){
+    color = get_color(options.theme, 'nodes', 'link_locked')
     ctx.setLineDash([6, 6])
-  else
+  }else{
+    color = get_color(options.theme, 'nodes', 'link')
     ctx.setLineDash([])
+  }
+  ctx.strokeStyle = color
   ctx.stroke()
 }
 

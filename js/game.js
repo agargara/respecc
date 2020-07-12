@@ -1,22 +1,27 @@
 /* TODO
   HIGH
   save/load
-  autosave
   animations
   permanent nodes
   bugfix: autopan weird with zoom
+  icons for resources instead of letters
+  write cost in corner of node
 
   MEDIUM
+  gradient background
+  min zoom based on size of visible tree
+  reveal entire areas instead of one node at a time
   pan bugfix (mouse pan jumps sometimes??)
   better looking UI
   better color themes
   graphics for character, resources, etc.
 */
 
-import {hit_circle, get_display_transform, DefaultDict} from './util.js'
+import {shallow_copy, hit_circle, get_display_transform, DefaultDict} from './util.js'
 import {draw_connection, draw_characters, draw_node} from './draw.js'
 import {tree} from './tree.js'
 import {characters} from './characters.js'
+import {strings} from './strings.js'
 
 var game = {}
 game.resources = {
@@ -26,8 +31,10 @@ game.resources = {
 }
 game.unlocks = {}
 game.options={
-  'scale_min': 0.75,
-  'scale_max': 1.5,
+  'autosave': true,
+  'autosave_interval': 5000,
+  'zoom_min': 0.5,
+  'zoom_max': 1.25,
   'animation_speed': 2.0,
   'max_travel_dist': 2,
   'lang': 'en',
@@ -37,11 +44,12 @@ game.options={
   'autopan': true,
   'autopan_margin': 0.5,
   'theme': {
-    'default': '#f00',
-    'bgcolor': '#1a1f1a',
+    'default': '#000',
+    'bgcolor': '#080E07', // rich black
     'selected_node': '#f00',
     'nodes': {
       'link': '#fff',
+      'link_locked': '#999',
       'deactivated': '#9a9',
       'activated': '#fff',
       'selected': '#efe',
@@ -79,6 +87,9 @@ function init_game(){
   resize()
   load() // load save data
   update_hud()
+  if (game.options.autosave){
+    game.autosave_timer = setInterval(save, game.options.autosave_interval)
+  }
 }
 
 /*
@@ -86,13 +97,14 @@ function init_game(){
 */
 function load(){
   let save = localStorage.getItem('save')
-  if (save){
+  if (typeof save === 'object' && save !== null){
     save = JSON.parse(save)
+    game.state = save.state
     game.resources = save.resources
     game.unlocks = save.unlocks
     game.options = save.options
-    game.state = save.state
-    // TODO tree / characters state??
+    shallow_copy(save.tree, tree)
+    shallow_copy(save.characters, characters)
   }
 
   // Load tree node statuses
@@ -104,15 +116,32 @@ function load(){
 }
 
 function save(){
+  update_status('save', 'saving')
   let save = {
     'state': game.state,
     'resources': game.resources,
     'unlocks': game.unlocks,
     'options': game.options,
+    'tree': {'nodes': {}},
+    'characters': {}
   }
+  // save tree node status
+  Object.entries(tree.nodes).forEach(([k,node])=>{
+    save.tree.nodes[k] = {
+      'status': node.status,
+      'locked': node.locked,
+      'hidden': node.hidden
+    }
+  })
+  // save relevant info about characters
+  Object.entries(characters).forEach(([k,chara])=>{
+    save.characters[k] = {
+      'current_node': chara.current_node,
+    }
+  })
   localStorage.setItem('save',JSON.stringify(save))
+  setTimeout(()=>{update_status('save', 'saved', true)}, 1000)
 }
-
 
 function current_character(){
   return characters[game.state.current_character]
@@ -381,6 +410,25 @@ function draw_tree(){
 /*
   [UI] altering the interface and view
 */
+function update_status(category, status){
+  let elem = document.getElementById('status')
+  // Show status
+  elem.classList.remove("fadeout");
+  // Trigger re-flow to ensure animation restarts
+  void elem.offsetWidth
+  let text = get_string(category,status)
+  elem.textContent = text
+  // Fade out status
+  elem.classList.add("fadeout");
+}
+
+function get_string(category, status){
+  if (strings[category] && strings[category][status])
+    return strings[category][status][game.options.lang]
+  else
+    return 'love'
+}
+
 function update_hud(){
   let restxt = ''
   Object.values(game.resources).forEach((r) => {
@@ -389,7 +437,7 @@ function update_hud(){
       restxt += r.name+': '+r.amount+' '
     }
   })
-  document.getElementById('hud').textContent = restxt
+  document.getElementById('resources').textContent = restxt
 }
 
 // resize canvas based on viewport
