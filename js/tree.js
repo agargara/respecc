@@ -1,6 +1,5 @@
-export var tree = {
-  'init': function(){
-    this.nodes = {
+export function init_tree(){
+  return {
     '0': {
       'pos': [
         0,
@@ -179,7 +178,7 @@ export var tree = {
       'unlocks': [],
       'hidden': true,
       'onactivate': function(game){
-        Object.values(tree.nodes).forEach(node => {
+        Object.values(game.tree).forEach(node => {
           if (node.status == 'activated' )
             game.resources.sp.amount += 0.5
         })
@@ -200,7 +199,7 @@ export var tree = {
       'onactivate': function(game){
         game.onrespec.pre.push(
           function(){
-            Object.values(tree.nodes).forEach(node => {
+            Object.values(game.tree).forEach(node => {
               if (node.status == 'activated' )
                 game.onrespec.resources.sp += 0.5
             })
@@ -273,5 +272,4 @@ export var tree = {
       }
     }
   }
-}
 }

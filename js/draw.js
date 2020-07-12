@@ -112,7 +112,8 @@ function draw_node_text(ctx, text, x, y, max_width, options){
 export function draw_characters(ctx, characters, tree, options){
   // Draw outlines for each character
   Object.values(characters).forEach(chara => {
-    let node = tree.nodes[chara.current_node]
+    let node = tree[chara.current_node]
+    if (!node) return
     let d = options.node_distance
     let x = node.pos[0] * d * 6
     let y = node.pos[1] * d * 4

@@ -19,11 +19,14 @@
 
 import {deep_copy, hit_circle, get_display_transform, DefaultDict} from './util.js'
 import {draw_connection, draw_characters, draw_node} from './draw.js'
-import {tree} from './tree.js'
-import {characters} from './characters.js'
+import {init_tree} from './tree.js'
+import {init_characters} from './characters.js'
 import {strings} from './strings.js'
 
+var tree
+var characters
 var game = {}
+game.tree = tree
 game.options={
   'autosave': true,
   'autosave_interval': 5000,
@@ -88,7 +91,7 @@ function init_game(){
 */
 function load(){
   let save = localStorage.getItem('save')
-  if (save && save !== null){
+  if (save){
     save = JSON.parse(save)
     game.state = save.state
     game.resources = save.resources
@@ -97,13 +100,6 @@ function load(){
     deep_copy(save.tree, tree)
     deep_copy(save.characters, characters)
   }
-
-  // Load tree node statuses
-  Object.values(tree.nodes).forEach(node => {
-    node.status = 'deactivated'
-    node.locked = true
-  })
-  tree.nodes['0'].locked = false
 }
 
 function save(){
@@ -117,8 +113,8 @@ function save(){
     'characters': {}
   }
   // save tree node status
-  Object.entries(tree.nodes).forEach(([k,node])=>{
-    save.tree.nodes[k] = {
+  Object.entries(tree).forEach(([k,node])=>{
+    save.tree[k] = {
       'status': node.status,
       'locked': node.locked,
       'hidden': node.hidden
@@ -150,11 +146,11 @@ function respec(){
     char.current_node = char.start_node
   })
   // reset activated nodes
-  Object.values(tree.nodes).forEach(node => {
+  Object.values(tree).forEach(node => {
     node.status = 'deactivated'
     node.locked = true
   })
-  tree.nodes['0'].locked = false
+  tree['0'].locked = false
   // reset resources
   Object.values(game.resources).forEach((res) => {
     res.amount = 0
@@ -169,8 +165,8 @@ function respec(){
 }
 
 function reset_all(){
-  tree.init()
-  characters.init()
+  tree = init_tree()
+  characters = init_characters()
   game.resources = {
     'sp': {'name': 'SP', 'amount': 0, 'show': true},
     'figs': {'name': 'Figs', 'amount': 0},
@@ -181,6 +177,11 @@ function reset_all(){
     'current_character': 'arborist'
   }
   game.onrespec = {'resources': new DefaultDict(0), 'pre':[]}
+  Object.values(tree).forEach(node => {
+    node.status = 'deactivated'
+    node.locked = true
+  })
+  tree['0'].locked = false
 }
 
 /*
@@ -190,7 +191,7 @@ function current_node_id(){
   return current_character()['current_node']
 }
 function current_node(){
-  return tree.nodes[current_node_id()]
+  return tree[current_node_id()]
 }
 // Check if node is activatable
 function can_activate(node){
@@ -199,8 +200,8 @@ function can_activate(node){
 }
 function unlock_neighbors(node){
   node.unlocks.forEach((id) => {
-    tree.nodes[id].locked = false
-    tree.nodes[id].hidden = false
+    tree[id].locked = false
+    tree[id].hidden = false
   })
 }
 // move current character to a node
@@ -293,7 +294,7 @@ function handle_movement(){
   let pos = cn.pos
   // TODO optimize to only search neighbors?
   // (would require keeping track of neighbors)
-  Object.entries(tree.nodes).forEach(([k,node]) => {
+  Object.entries(tree).forEach(([k,node]) => {
     // skip self
     if (k == cnid) return
     // skip hidden and locked
@@ -324,9 +325,9 @@ function handle_movement(){
 
 function hover_over(x, y){
   // hit detection for tree
-  if (!tree || !tree.nodes)
+  if (!tree || !tree)
     return
-  Object.values(tree.nodes).forEach(node => {
+  Object.values(tree).forEach(node => {
     if(hit_circle(x, y, node.x, node.y, node.r)){
       node.selected = true
     }else{
@@ -388,11 +389,11 @@ function draw(){
 }
 
 function draw_tree(){
-  if(!tree || !tree.nodes)
+  if(!tree || !tree)
     return
   // get nodes to draw
   let nodes_to_draw = []
-  Object.values(tree.nodes).forEach(node => {
+  Object.values(tree).forEach(node => {
     if(node.hidden==false){
       nodes_to_draw.push(node)
     }
@@ -400,7 +401,7 @@ function draw_tree(){
   // Draw connections between nodes
   nodes_to_draw.forEach(node => {
     node.unlocks.forEach(id => {
-      let neighbor = tree.nodes[id]
+      let neighbor = tree[id]
       if(neighbor && !neighbor.hidden){
         draw_connection(ctx, node, neighbor, game.options)
       }
