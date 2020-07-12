@@ -8,6 +8,9 @@ body{
   flex-direction: column;
 }
 
+#ui{
+  margin-top: 12px;
+}
 #game_area{
   max-width: 80vw;
   max-height: 80vh;

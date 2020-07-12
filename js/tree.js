@@ -1,5 +1,6 @@
 export var tree = {
-  'nodes': {
+  'init': function(){
+    this.nodes = {
     '0': {
       'pos': [
         0,
@@ -272,4 +273,5 @@ export var tree = {
       }
     }
   }
+}
 }

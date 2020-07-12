@@ -5,9 +5,15 @@ export class DefaultDict {
     })
   }
 }
-export function shallow_copy(a, b){
+
+// TODO optimize this recursion hell
+export function deep_copy(a, b){
   Object.entries(a).forEach(([k, v]) => {
-    b[k] = v
+    if (typeof v === 'object' && v !== null){
+      deep_copy(v, b[k])
+    }else{
+      b[k] = v
+    }
   })
 }
 export function normalize(pos, scale=1.0) {

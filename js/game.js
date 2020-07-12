@@ -17,19 +17,13 @@
   graphics for character, resources, etc.
 */
 
-import {shallow_copy, hit_circle, get_display_transform, DefaultDict} from './util.js'
+import {deep_copy, hit_circle, get_display_transform, DefaultDict} from './util.js'
 import {draw_connection, draw_characters, draw_node} from './draw.js'
 import {tree} from './tree.js'
 import {characters} from './characters.js'
 import {strings} from './strings.js'
 
 var game = {}
-game.resources = {
-  'sp': {'name': 'SP', 'amount': 0, 'show': true},
-  'figs': {'name': 'Figs', 'amount': 0},
-  'worms':  {'name': 'Worms', 'amount': 0}
-}
-game.unlocks = {}
 game.options={
   'autosave': true,
   'autosave_interval': 5000,
@@ -57,10 +51,6 @@ game.options={
     }
   }
 }
-game.state = {
-  'current_character': 'arborist'
-}
-game.onrespec = {'resources': new DefaultDict(0), 'pre':[]}
 var canvas, ctx            // canvas and drawing context
 var vw, vh                 // viewport height/width
 var keys_pressed = {}
@@ -82,6 +72,7 @@ window.onload = function(){
 }
 
 function init_game(){
+  reset_all()
   canvas = document.getElementById('game_screen')
   ctx = canvas.getContext('2d')
   resize()
@@ -103,9 +94,8 @@ function load(){
     game.resources = save.resources
     game.unlocks = save.unlocks
     game.options = save.options
-    shallow_copy(save.tree, tree)
-    shallow_copy(save.characters, characters)
-    debug(save)
+    deep_copy(save.tree, tree)
+    deep_copy(save.characters, characters)
   }
 
   // Load tree node statuses
@@ -178,6 +168,21 @@ function respec(){
   update_hud()
 }
 
+function reset_all(){
+  tree.init()
+  characters.init()
+  game.resources = {
+    'sp': {'name': 'SP', 'amount': 0, 'show': true},
+    'figs': {'name': 'Figs', 'amount': 0},
+    'worms':  {'name': 'Worms', 'amount': 0}
+  }
+  game.unlocks = {}
+  game.state = {
+    'current_character': 'arborist'
+  }
+  game.onrespec = {'resources': new DefaultDict(0), 'pre':[]}
+}
+
 /*
   [NODE] node manipulation
 */
@@ -208,6 +213,8 @@ function move_to(node_id){
 */
 function init_listeners(){
   window.addEventListener('resize', resize)
+  // button events
+  document.getElementById('btn_reset').addEventListener('click', reset_all)
   // get display transform to handle zoom and pan
   display_transform = get_display_transform(ctx, canvas, mouse)
   // listen for keyboard events
