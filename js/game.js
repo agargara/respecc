@@ -1,6 +1,5 @@
 /* TODO
   HIGH
-  save/load
   animations
   permanent nodes
   bugfix: autopan weird with zoom
@@ -8,6 +7,10 @@
   write cost in corner of node
 
   MEDIUM
+  menu with manual save/load, options
+  save slots
+  controls help
+  show hints
   gradient background
   min zoom based on size of visible tree
   reveal entire areas instead of one node at a time
@@ -71,7 +74,8 @@ var display_transform
 window.onload = function(){
   init_game()
   init_listeners()
-  animate()
+  draw()
+  debug('hello')
 }
 
 function init_game(){
@@ -370,11 +374,8 @@ function mouse_move(event) {
 /*
   [DRAW] drawing related functions
 */
-function animate() {
-  requestAnimationFrame(animate)
-  draw()
-}
 function draw(){
+  requestAnimationFrame(draw)
   // update the transform
   display_transform.update()
   // set home transform to clear the screem
@@ -422,13 +423,13 @@ function draw_tree(){
 function update_status(category, status){
   let elem = document.getElementById('status')
   // Show status
-  elem.classList.remove("fadeout");
+  elem.classList.remove('fadeout')
   // Trigger re-flow to ensure animation restarts
   void elem.offsetWidth
   let text = get_string(category,status)
   elem.textContent = text
   // Fade out status
-  elem.classList.add("fadeout");
+  elem.classList.add('fadeout')
 }
 
 function get_string(category, status){
