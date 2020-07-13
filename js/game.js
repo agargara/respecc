@@ -3,12 +3,10 @@ store xy position in character object and draw based on that
 characters handle their own animation
   HIGH
   animations
-    animations off option (for speedrunning)
     when revealing hidden node:
       1) link line extends
       2) line splits and curves form node
       3) node bgcolor and text fades in
-    when moving between nodes: player mark transitions
   player icons
   permanent nodes
   bugfix: autopan weird with zoom
@@ -16,6 +14,8 @@ characters handle their own animation
   write cost in corner of node
 
   MEDIUM
+  character moves along curved path
+  better looking graphics
   menu with manual save/load, options
   save slots
   controls help
@@ -30,7 +30,7 @@ characters handle their own animation
 */
 
 import {deep_copy, hit_circle, get_display_transform, DefaultDict} from './util.js'
-import {draw_connection, draw_characters, draw_node} from './draw.js'
+import {draw_tree} from './draw.js'
 import {init_tree} from './tree.js'
 import {init_characters} from './characters.js'
 import {strings} from './strings.js'
@@ -43,7 +43,7 @@ game.options={
   'autosave_interval': 5000,
   'zoom_min': 0.5,
   'zoom_max': 1.25,
-  'animation_speed': 1.0, // lower numbers are faster, 0 for off
+  'animation_speed': 1.0, // higher numbers are faster, 0 for off
   'max_travel_dist': 2,
   'lang': 'en',
   'node_size': 64,
@@ -152,9 +152,9 @@ function respec(){
   })
   // reset keys
   keys_pressed = {}
-  // reset character positions
+  // reset characters
   Object.values(characters).forEach((char) => {
-    char.current_node = char.start_node
+    char.reset()
   })
   // reset activated nodes
   Object.values(tree).forEach(node => {
@@ -179,6 +179,7 @@ function reset_all(){
   tree = init_tree()
   game.tree = tree
   characters = init_characters(game)
+  game.characters = characters
   game.resources = {
     'sp': {'name': 'SP', 'amount': 0, 'show': true},
     'figs': {'name': 'Figs', 'amount': 0},
@@ -212,8 +213,12 @@ function can_activate(node){
 }
 function unlock_neighbors(node){
   node.unlocks.forEach((id) => {
-    tree[id].locked = false
-    tree[id].hidden = false
+    if (game.options.animation_speed <= 0 || !tree[id].hidden){
+      tree[id].locked = false
+      tree[id].hidden = false
+    }else{
+      tree[id].link_t = 0
+    }
   })
 }
 
@@ -232,6 +237,9 @@ function init_listeners(){
     handle_keyboard_input()
   })
   document.addEventListener('keyup', function (e) {
+    if (e.key == ' '){
+      e.preventDefault()
+    }
     keys_pressed[e.key] = false
   })
   // listen for mouse events
@@ -381,42 +389,14 @@ function draw(){
   // set home transform to clear the screem
   display_transform.setHome()
   // draw background
-  // TODO optimization: only redraw necessary parts?
+  // [optimize] only redraw necessary parts?
   ctx.rect(0, 0, canvas.width, canvas.height)
   ctx.fillStyle = game.options.theme.bgcolor
   ctx.fill()
   // draw tree
   display_transform.setTransform()
-  draw_tree()
+  draw_tree(ctx, game)
   requestAnimationFrame(draw)
-}
-
-function draw_tree(){
-  if(!tree || !tree)
-    return
-  // get nodes to draw
-  let nodes_to_draw = []
-  Object.values(tree).forEach(node => {
-    if(node.hidden==false){
-      nodes_to_draw.push(node)
-    }
-  })
-  // Draw connections between nodes
-  nodes_to_draw.forEach(node => {
-    node.unlocks.forEach(id => {
-      let neighbor = tree[id]
-      if(neighbor && !neighbor.hidden){
-        draw_connection(ctx, node, neighbor, game.options)
-      }
-    })
-  })
-  // Draw characters
-  draw_characters(ctx, characters, tree, game.options)
-
-  // Draw nodes themselves
-  nodes_to_draw.forEach(node => {
-    draw_node(ctx, node, game.options)
-  })
 }
 
 /*
@@ -468,7 +448,7 @@ function resize(){
 // pan so that cursor is not too far from center
 game.autopan = function(){
   if (!game.options.autopan) return
-  let pos = current_node().pos
+  let pos = current_character().pos
   let d = game.options.node_distance
   let x = pos[0] * 6 * d
   let y = pos[1] * 4 * d

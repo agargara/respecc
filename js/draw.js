@@ -1,3 +1,35 @@
+export function draw_tree(ctx, game){
+  let tree = game.tree
+  if(!tree)
+    return
+  // get nodes to draw
+  let nodes_to_draw = []
+  Object.values(tree).forEach(node => {
+    if(node.hidden==false){
+      nodes_to_draw.push(node)
+    }
+  })
+  // Draw connections between nodes
+  nodes_to_draw.forEach(node => {
+    node.unlocks.forEach(id => {
+      let neighbor = tree[id]
+      if(neighbor){
+        if(!neighbor.hidden || neighbor.link_t != undefined){
+          draw_connection(ctx, node, neighbor, game.options)
+        }
+      }
+    })
+  })
+  // Draw characters
+  draw_characters(ctx, game.characters, tree, game.options)
+
+  // Draw nodes themselves
+  nodes_to_draw.forEach(node => {
+    draw_node(ctx, node, game.options)
+  })
+}
+
+
 /**
  * Draws a rounded rectangle using the current state of the canvas.
  * If you omit the last three params, it will draw a rectangle
@@ -16,7 +48,7 @@
  * @param {Boolean} [fill = false] Whether to fill the rectangle.
  * @param {Boolean} [stroke = true] Whether to stroke the rectangle.
  */
-export function draw_round_rect(ctx, x, y, width, height, radius, fill, stroke) {
+function draw_round_rect(ctx, x, y, width, height, radius, fill, stroke) {
   if (typeof stroke === 'undefined') {
     stroke = true
   }
@@ -58,17 +90,27 @@ export function draw_circle(ctx, x, y, r, color){
 }
 
 export function draw_connection(ctx, node1, node2, options){
-  let r = options.node_distance
-  let x1 = node1.pos[0] * r * 6
-  let y1 = node1.pos[1] * r * 4
-  let x2 = node2.pos[0] * r * 6
-  let y2 = node2.pos[1] * r * 4
-  ctx.beginPath()
-  ctx.moveTo(x1, y1)
-  ctx.quadraticCurveTo(x2, y1, x2, y2)
+  let [x1, y1, x2, y2] = get_connection_points(node1, node2, options.node_distance, options.node_size)
+  // control point
+  let cx = x2
+  let cy = y1
+  // progress
+  let t = 1.0
+  // slowly reveal nodes
+  if (node2.link_t!=undefined && node2.link_t < 1){
+    t = node2.link_t
+    node2.link_t += (0.01*options.animation_speed)
+    if (node2.link_t >= 1.0){
+      t = 1
+      node2.locked = false
+      node2.hidden = false
+      node2.link_t = undefined
+    }
+  }
+
   let color
-  // dashed line if destination is locked
-  if (node2.locked){
+  // dashed line if destination is locked and visible
+  if (node2.locked && !node2.hidden){
     color = get_color(options.theme, 'nodes', 'link_locked')
     ctx.setLineDash([6, 6])
   }else{
@@ -77,10 +119,57 @@ export function draw_connection(ctx, node1, node2, options){
   }
   ctx.lineWidth = 8
   ctx.strokeStyle = color
-  ctx.stroke()
+  drawBezierSplit(ctx, x1, y1, cx, cy, x2, y2, 0, t)
 }
 
-export function draw_node(ctx, node, options){
+// [optimize] don't recalculate this stuff every draw frame...
+function get_connection_points(node1, node2, node_dist, node_size){
+  let [x1, y1, x2, y2] = [
+    node1.pos[0],
+    node1.pos[1],
+    node2.pos[0],
+    node2.pos[1]
+  ]
+  // adjust points
+  x1 = x1 * node_dist * 6
+  y1 = y1 * node_dist * 4
+  x2 = x2 * node_dist * 6
+  y2 = y2 * node_dist * 4
+  let yoffset = node_size*0.5
+  let xoffset = yoffset*1.618033989
+  // [optimize] there's probably a clever way to simplify the logic below but my brain hurts too much to figure it out
+  if (x1 == x2){
+    if (y2 < y1){
+      // node 2 is directly above node 1:
+      y1 += -yoffset
+      y2 += yoffset
+    }else{
+      // node 2 is directly below node 1:
+      y1 += yoffset
+      y2 += -yoffset
+    }
+  }else{
+    // node 2: left or right of node 1?
+    let sign = 1
+    if (x2 < x1){
+      sign = -1
+    }
+    x1 += xoffset*sign
+    if (y1 == y2){
+      // same level
+      x2 += xoffset*sign
+    }else if (y2 < y1){
+      // up
+      y2 += yoffset
+    }else{
+      // down
+      y2 += -yoffset
+    }
+  }
+  return [x1, y1, x2, y2]
+}
+
+function draw_node(ctx, node, options){
   let h = options.node_size
   let w = h*1.618033989
   let d = options.node_distance
@@ -110,7 +199,7 @@ function draw_node_text(ctx, text, x, y, max_width, options){
   })
 }
 
-export function draw_characters(ctx, characters, tree, options){
+function draw_characters(ctx, characters, tree, options){
   // Draw outlines for each character
   Object.values(characters).forEach(chara => {
     let d = options.node_distance
@@ -139,4 +228,58 @@ function get_color(theme, key1, key2){
     }
   }
   return color
+}
+
+/**
+ * Draws a portion of a quadratic curve
+ *
+ * @param ctx       The canvas context to draw to
+ * @param x0        The x-coord of the start point
+ * @param y0        The y-coord of the start point
+ * @param x1        The x-coord of the control point
+ * @param y1        The y-coord of the control point
+ * @param x2        The x-coord of the end point
+ * @param y2        The y-coord of the end point
+ * @param t0        The start ratio of the splitted bezier from 0.0 to 1.0
+ * @param t1        The start ratio of the splitted bezier from 0.0 to 1.0
+ */
+function drawBezierSplit(ctx, x0, y0, x1, y1, x2, y2, t0, t1) {
+  ctx.beginPath()
+
+  if( 0.0 == t0 && t1 == 1.0 ) {
+    ctx.moveTo( x0, y0 )
+    ctx.quadraticCurveTo( x1, y1, x2, y2 )
+  } else if( t0 != t1 ) {
+    var t00 = t0 * t0,
+      t01 = 1.0 - t0,
+      t02 = t01 * t01,
+      t03 = 2.0 * t0 * t01
+
+    var nx0 = t02 * x0 + t03 * x1 + t00 * x2,
+      ny0 = t02 * y0 + t03 * y1 + t00 * y2
+
+    t00 = t1 * t1
+    t01 = 1.0 - t1
+    t02 = t01 * t01
+    t03 = 2.0 * t1 * t01
+
+    var nx2 = t02 * x0 + t03 * x1 + t00 * x2,
+      ny2 = t02 * y0 + t03 * y1 + t00 * y2
+
+    var nx1 = lerp ( lerp ( x0 , x1 , t0 ) , lerp ( x1 , x2 , t0 ) , t1 ),
+      ny1 = lerp ( lerp ( y0 , y1 , t0 ) , lerp ( y1 , y2 , t0 ) , t1 )
+
+    ctx.moveTo( nx0, ny0 )
+    ctx.quadraticCurveTo( nx1, ny1, nx2, ny2 )
+  }
+
+  ctx.stroke()
+  ctx.closePath()
+}
+
+/**
+ * Linearly interpolates between two numbers
+ */
+function lerp(v0, v1, t) {
+  return ( 1.0 - t ) * v0 + t * v1
 }

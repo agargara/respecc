@@ -9,12 +9,16 @@ class Character {
     this.pos = Array.from(this.tree[node].pos)
   }
 
+  reset(){
+    this.current_node = this.start_node
+    this.pos = Array.from(this.tree[this.current_node].pos)
+  }
+
   cancel_movement(){
     clearTimeout(this.move_timeout)
   }
 
   move(target){
-    console.log(this.pos)
     // no animation?
     if (this.game.options.animation_speed <= 0){
       this.pos = this.tree[target].pos
@@ -33,12 +37,12 @@ class Character {
     }
     this.pos[0] += dx*0.1
     this.pos[1] += dy*0.1
-    //this.game.autopan()
+    this.game.autopan()
     this.move_timeout = setTimeout(
       () => {
         this.move(target)
       },
-      50*this.game.animation_speed
+      50/this.game.animation_speed
     )
   }
 }

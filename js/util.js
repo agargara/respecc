@@ -6,7 +6,7 @@ export class DefaultDict {
   }
 }
 
-// TODO optimize this recursion hell
+// [optimize] this could create recursion hell...
 export function deep_copy(a, b){
   Object.entries(a).forEach(([k, v]) => {
     if (typeof v === 'object' && v !== null){
