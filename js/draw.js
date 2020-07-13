@@ -75,6 +75,7 @@ export function draw_connection(ctx, node1, node2, options){
     color = get_color(options.theme, 'nodes', 'link')
     ctx.setLineDash([])
   }
+  ctx.lineWidth = 8
   ctx.strokeStyle = color
   ctx.stroke()
 }
@@ -112,17 +113,15 @@ function draw_node_text(ctx, text, x, y, max_width, options){
 export function draw_characters(ctx, characters, tree, options){
   // Draw outlines for each character
   Object.values(characters).forEach(chara => {
-    let node = tree[chara.current_node]
-    if (!node) return
     let d = options.node_distance
-    let x = node.pos[0] * d * 6
-    let y = node.pos[1] * d * 4
+    let x = chara.pos[0] * d * 6
+    let y = chara.pos[1] * d * 4
     let h = options.node_size
     let w = h*1.618033989
-    h+=8
-    w+=8
-    ctx.fillStyle = chara.color
-    draw_round_rect(ctx, x-w*0.5, y-h*0.5, w, h, h*0.5, true, false)
+    ctx.lineWidth = 12
+    ctx.setLineDash([])
+    ctx.strokeStyle = chara.color
+    draw_round_rect(ctx, x-w*0.5, y-h*0.5, w, h, h*0.5, false, true)
   })
 }
 

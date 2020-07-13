@@ -1,6 +1,15 @@
 /* TODO
+store xy position in character object and draw based on that
+characters handle their own animation
   HIGH
   animations
+    animations off option (for speedrunning)
+    when revealing hidden node:
+      1) link line extends
+      2) line splits and curves form node
+      3) node bgcolor and text fades in
+    when moving between nodes: player mark transitions
+  player icons
   permanent nodes
   bugfix: autopan weird with zoom
   icons for resources instead of letters
@@ -29,13 +38,12 @@ import {strings} from './strings.js'
 var tree
 var characters
 var game = {}
-game.tree = tree
 game.options={
   'autosave': true,
   'autosave_interval': 5000,
   'zoom_min': 0.5,
   'zoom_max': 1.25,
-  'animation_speed': 2.0,
+  'animation_speed': 1.0, // lower numbers are faster, 0 for off
   'max_travel_dist': 2,
   'lang': 'en',
   'node_size': 64,
@@ -74,8 +82,7 @@ var display_transform
 window.onload = function(){
   init_game()
   init_listeners()
-  draw()
-  debug('hello')
+  requestAnimationFrame(draw)
 }
 
 function init_game(){
@@ -170,7 +177,8 @@ function respec(){
 
 function reset_all(){
   tree = init_tree()
-  characters = init_characters()
+  game.tree = tree
+  characters = init_characters(game)
   game.resources = {
     'sp': {'name': 'SP', 'amount': 0, 'show': true},
     'figs': {'name': 'Figs', 'amount': 0},
@@ -207,10 +215,6 @@ function unlock_neighbors(node){
     tree[id].locked = false
     tree[id].hidden = false
   })
-}
-// move current character to a node
-function move_to(node_id){
-  current_character()['current_node'] = node_id
 }
 
 /*
@@ -289,22 +293,19 @@ function handle_movement(){
   if (dy == 0 && dx == 0) return
   let angle = Math.atan2(dy, dx)
 
-  // find closest unlocked node in direction
-  let cn = current_node()
-  let cnid = current_node_id()
+  // find closest unlocked node to current character in direction
+  let c = current_character()
+  let pos = c.pos
   let closest_distance = 9999
   let closest_angle = 10
   let closest_node_id = null
-  let pos = cn.pos
-  // TODO optimize to only search neighbors?
-  // (would require keeping track of neighbors)
   Object.entries(tree).forEach(([k,node]) => {
-    // skip self
-    if (k == cnid) return
     // skip hidden and locked
     if (node.hidden || node.locked) return
     dy = node.pos[1] - pos[1]
     dx = node.pos[0] - pos[0]
+    // skip current position
+    if (dx == 0 && dy == 0) return
     let angle2 = Math.atan2(dy, dx)
     let diff = Math.abs(Math.atan2(Math.sin(angle2-angle), Math.cos(angle2-angle)))
     let dist = Math.sqrt(dx * dx + dy * dy)
@@ -321,9 +322,9 @@ function handle_movement(){
     }
   })
   if(closest_node_id != null){
-    move_to(closest_node_id)
-    // pan after movement
-    autopan()
+    // stop existing movement
+    c.cancel_movement()
+    c.move(closest_node_id)
   }
 }
 
@@ -375,18 +376,19 @@ function mouse_move(event) {
   [DRAW] drawing related functions
 */
 function draw(){
-  requestAnimationFrame(draw)
   // update the transform
   display_transform.update()
   // set home transform to clear the screem
   display_transform.setHome()
   // draw background
+  // TODO optimization: only redraw necessary parts?
   ctx.rect(0, 0, canvas.width, canvas.height)
   ctx.fillStyle = game.options.theme.bgcolor
   ctx.fill()
   // draw tree
   display_transform.setTransform()
   draw_tree()
+  requestAnimationFrame(draw)
 }
 
 function draw_tree(){
@@ -464,7 +466,7 @@ function resize(){
 }
 
 // pan so that cursor is not too far from center
-function autopan(){
+game.autopan = function(){
   if (!game.options.autopan) return
   let pos = current_node().pos
   let d = game.options.node_distance
