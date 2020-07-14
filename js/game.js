@@ -27,6 +27,12 @@ characters handle their own animation
   better looking UI
   better color themes
   graphics for character, resources, etc.
+
+  IDEAS
+  make draw.js into class?
+  dark magic - bonemancy
+    collect bones
+    use bones to cast dark magic
 */
 
 import {deep_copy, hit_circle, get_display_transform, DefaultDict} from './util.js'
@@ -35,6 +41,7 @@ import {init_tree} from './tree.js'
 import {init_characters} from './characters.js'
 import {strings} from './strings.js'
 
+const GOLD = 1.618033989
 var tree
 var characters
 var game = {}
@@ -47,7 +54,7 @@ game.options={
   'max_travel_dist': 2,
   'lang': 'en',
   'node_size': 64,
-  'node_distance': 24,
+  'node_distance': 90,
   'node_text_margin': 24,
   'autopan': true,
   'autopan_margin': 0.5,
@@ -160,6 +167,7 @@ function respec(){
   Object.values(tree).forEach(node => {
     node.status = 'deactivated'
     node.locked = true
+    node.link_t = undefined
   })
   tree['0'].locked = false
   // reset resources
@@ -220,6 +228,20 @@ function unlock_neighbors(node){
       tree[id].link_t = 0
     }
   })
+}
+// check if x, y is within node
+function hit_node(x, y, node){
+  let nx = node.pos[0]
+  let ny = node.pos[1]
+  return hit_circle(x, y, nx, ny, game.options.node_size)
+}
+// convert grid position to real position
+game.gridpos_to_realpos = function(gridpos){
+  let d = game.options.node_distance
+  return [
+    gridpos[0] * d * GOLD,
+    gridpos[1] * d
+  ]
 }
 
 /*
@@ -336,23 +358,9 @@ function handle_movement(){
   }
 }
 
-function hover_over(x, y){
-  // hit detection for tree
-  if (!tree || !tree)
-    return
-  Object.values(tree).forEach(node => {
-    if(hit_circle(x, y, node.x, node.y, node.r)){
-      node.selected = true
-    }else{
-      node.selected = false
-    }
-  })
-}
-
 function mouse_move(event) {
   let x = event.offsetX
   let y = event.offsetY
-  hover_over(x, y)
   mouse.pos['x'] = x
   mouse.pos['y'] = y
   if (mouse.pos.x === undefined) {
@@ -367,6 +375,7 @@ function mouse_move(event) {
     mouse.btn |= mouse.btnmask[event.which-1]
   } else if (event.type === 'mouseup') {
     mouse.btn &= mouse.btnmask[event.which+2]
+    click(x, y)
   } else if (event.type === 'mouseout') {
     mouse.btn = 0
     mouse.over = false
@@ -378,6 +387,16 @@ function mouse_move(event) {
   } else if (event.type === 'DOMMouseScroll') { // Firefox
     mouse.pos.z = -event.detail
   }
+}
+
+function click(x, y){
+  // detect if any node was clicked
+  if (!tree) return
+  Object.values(tree).forEach(node => {
+    if(hit_node(x, y, node)){
+      debug(node)
+    }
+  })
 }
 
 /*
@@ -449,9 +468,7 @@ function resize(){
 game.autopan = function(){
   if (!game.options.autopan) return
   let pos = current_character().pos
-  let d = game.options.node_distance
-  let x = pos[0] * 6 * d
-  let y = pos[1] * 4 * d
+  let [x,y] = game.gridpos_to_realpos(pos)
   let w = canvas.width * 0.5
   let h = canvas.height * 0.5
   // calculate distance from center

@@ -7,6 +7,9 @@ class Character {
     this.current_node = 0
     this.color = color
     this.pos = Array.from(this.tree[node].pos)
+    this.visited_nodes = {
+      node: true
+    }
   }
 
   reset(){
@@ -33,6 +36,7 @@ class Character {
     if (Math.abs(dx) < 0.03 && Math.abs(dy) < 0.03){
       this.pos = Array.from(target_pos)
       this.current_node = target
+      this.visited_nodes[target] = true
       return
     }
     this.pos[0] += dx*0.1

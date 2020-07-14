@@ -15,17 +15,17 @@ export function draw_tree(ctx, game){
       let neighbor = tree[id]
       if(neighbor){
         if(!neighbor.hidden || neighbor.link_t != undefined){
-          draw_connection(ctx, node, neighbor, game.options)
+          draw_connection(ctx, node, neighbor, game)
         }
       }
     })
   })
   // Draw characters
-  draw_characters(ctx, game.characters, tree, game.options)
+  draw_characters(ctx, game)
 
   // Draw nodes themselves
   nodes_to_draw.forEach(node => {
-    draw_node(ctx, node, game.options)
+    draw_node(ctx, node, game)
   })
 }
 
@@ -89,8 +89,8 @@ export function draw_circle(ctx, x, y, r, color){
   ctx.fill()
 }
 
-export function draw_connection(ctx, node1, node2, options){
-  let [x1, y1, x2, y2] = get_connection_points(node1, node2, options.node_distance, options.node_size)
+export function draw_connection(ctx, node1, node2, game){
+  let [x1, y1, x2, y2] = get_connection_points(node1, node2, game)
   // control point
   let cx = x2
   let cy = y1
@@ -99,7 +99,7 @@ export function draw_connection(ctx, node1, node2, options){
   // slowly reveal nodes
   if (node2.link_t!=undefined && node2.link_t < 1){
     t = node2.link_t
-    node2.link_t += (0.01*options.animation_speed)
+    node2.link_t += (0.05*game.options.animation_speed)
     if (node2.link_t >= 1.0){
       t = 1
       node2.locked = false
@@ -111,10 +111,10 @@ export function draw_connection(ctx, node1, node2, options){
   let color
   // dashed line if destination is locked and visible
   if (node2.locked && !node2.hidden){
-    color = get_color(options.theme, 'nodes', 'link_locked')
+    color = get_color(game.options.theme, 'nodes', 'link_locked')
     ctx.setLineDash([6, 6])
   }else{
-    color = get_color(options.theme, 'nodes', 'link')
+    color = get_color(game.options.theme, 'nodes', 'link')
     ctx.setLineDash([])
   }
   ctx.lineWidth = 8
@@ -123,19 +123,10 @@ export function draw_connection(ctx, node1, node2, options){
 }
 
 // [optimize] don't recalculate this stuff every draw frame...
-function get_connection_points(node1, node2, node_dist, node_size){
-  let [x1, y1, x2, y2] = [
-    node1.pos[0],
-    node1.pos[1],
-    node2.pos[0],
-    node2.pos[1]
-  ]
-  // adjust points
-  x1 = x1 * node_dist * 6
-  y1 = y1 * node_dist * 4
-  x2 = x2 * node_dist * 6
-  y2 = y2 * node_dist * 4
-  let yoffset = node_size*0.5
+function get_connection_points(node1, node2, game){
+  let [x1, y1] = game.gridpos_to_realpos(node1.pos)
+  let [x2, y2] = game.gridpos_to_realpos(node2.pos)
+  let yoffset = game.options.node_size*0.5
   let xoffset = yoffset*1.618033989
   // [optimize] there's probably a clever way to simplify the logic below but my brain hurts too much to figure it out
   if (x1 == x2){
@@ -169,20 +160,44 @@ function get_connection_points(node1, node2, node_dist, node_size){
   return [x1, y1, x2, y2]
 }
 
-function draw_node(ctx, node, options){
-  let h = options.node_size
+function draw_node(ctx, node, game){
+  let h = game.options.node_size
   let w = h*1.618033989
-  let d = options.node_distance
-  let x = node.pos[0] * d * 6
-  let y = node.pos[1] * d * 4
-  let margin = options.node_text_margin
-  let color = get_color(options.theme, 'nodes', node.status)
+  let [x,y] = game.gridpos_to_realpos(node.pos)
+  let margin = game.options.node_text_margin
+  let color = get_color(game.options.theme, 'nodes', node.status)
   ctx.fillStyle = color
-  draw_round_rect(ctx, x-w*0.5, y-h*0.5, w, h, h*0.5, true, false)
-  let text = node.text[options.lang]
+  if (node.shape == 'heart'){
+    draw_heart(ctx, x, y, w, h, true, false)
+  }else{
+    // default shape: rounded rectangle
+    draw_round_rect(ctx, x-w*0.5, y-h*0.5, w, h, h*0.5, true, false)
+  }
+
+  let text = node.text[game.options.lang]
   if (text){
     text = text+'\nCost: '+node.cost+' SP'
-    draw_node_text(ctx, text, x, y, w-margin, options)
+    draw_node_text(ctx, text, x, y, w-margin, game.options)
+  }
+}
+
+function draw_heart(ctx, x, y, w, h, fill=false, stroke=false){
+  y += 4
+  h = h*0.5
+  w = w*0.75
+  let c1 = 2.5
+  let c2 = 0.75
+  ctx.beginPath()
+  ctx.moveTo(x, y+h)
+  ctx.bezierCurveTo(x-w, y+(h*c2), x-w, y-(h*c1), x, y-h)
+  ctx.bezierCurveTo(x+w, y-(h*c1), x+w, y+(h*c2), x, y+h)
+  //ctx.quadraticCurveTo(x+w, y-(h*c), x, y+h)
+  ctx.closePath()
+  if (fill) {
+    ctx.fill()
+  }
+  if (stroke) {
+    ctx.stroke()
   }
 }
 
@@ -199,13 +214,12 @@ function draw_node_text(ctx, text, x, y, max_width, options){
   })
 }
 
-function draw_characters(ctx, characters, tree, options){
+function draw_characters(ctx, game){
   // Draw outlines for each character
-  Object.values(characters).forEach(chara => {
-    let d = options.node_distance
-    let x = chara.pos[0] * d * 6
-    let y = chara.pos[1] * d * 4
-    let h = options.node_size
+  Object.values(game.characters).forEach(chara => {
+    let pos = game.gridpos_to_realpos(chara.pos)
+    let [x,y] = [pos[0], pos[1]]
+    let h = game.options.node_size
     let w = h*1.618033989
     ctx.lineWidth = 12
     ctx.setLineDash([])

@@ -24,6 +24,7 @@ export function init_tree(){
         0,
         -1
       ],
+      'shape': 'heart',
       'cost': 1,
       'text': {
         'en': 'Gain\n2 SP'
