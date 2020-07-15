@@ -6,6 +6,28 @@ export class DefaultDict {
   }
 }
 
+export function load_file(path, callback, type){
+  let xmlHTTP = new XMLHttpRequest()
+  xmlHTTP.open('GET', path)
+  xmlHTTP.send()
+  xmlHTTP.onload = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      let response
+      if (type == 'xml'){
+        response = this.responseXML
+      }else if (type == 'svg'){
+        // [optimize] there might be a better way to do this
+        let div = document.createElement('div')
+        div.innerHTML = this.responseText
+        response = div.querySelector('svg')
+      }else{
+        response = this.responseText
+      }
+      callback(response)
+    }
+  }
+}
+
 // [optimize] this could create recursion hell...
 export function deep_copy(a, b){
   Object.entries(a).forEach(([k, v]) => {

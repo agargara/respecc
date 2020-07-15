@@ -170,7 +170,8 @@ function draw_node(ctx, node, game){
   if (node.shape == 'heart'){
     draw_heart(ctx, x, y, w, h, true, false)
   }else if (node.shape == 'svg'){
-    let points = game.testpoints
+    let points = game.node_shapes['foo'] // TODO
+    if(!points) return
     ctx.lineWidth = 10
     ctx.strokeStyle = '#f60'
     draw_points(ctx, points, 0.5)

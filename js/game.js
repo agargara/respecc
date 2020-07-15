@@ -35,7 +35,7 @@ characters handle their own animation
     use bones to cast dark magic
 */
 
-import {deep_copy, hit_circle, get_display_transform, DefaultDict} from './util.js'
+import {load_file, deep_copy, hit_circle, get_display_transform, DefaultDict} from './util.js'
 import {draw_tree} from './draw.js'
 import {init_tree} from './tree.js'
 import {init_characters} from './characters.js'
@@ -87,12 +87,20 @@ var mouse = {
 var display_transform
 
 window.onload = function(){
-  init_game()
-  init_listeners()
-  requestAnimationFrame(draw)
+  load_assets()
+}
+
+function load_assets(){
+  // TODO display "loading..."
+  load_file('../resources/nodes.svg', function(result){
+    game.nodes_svg = result
+    init_game()
+  }, 'svg')
 }
 
 function init_game(){
+  // convert svg paths to point arrays
+  init_svgs()
   reset_all()
   canvas = document.getElementById('game_screen')
   ctx = canvas.getContext('2d')
@@ -102,9 +110,20 @@ function init_game(){
   if (game.options.autosave){
     game.autosave_timer = setInterval(save, game.options.autosave_interval)
   }
-  // temp: prepare svg data for testing
-  let testpath = document.querySelector('path')
-  game.testpoints = path_to_points(testpath)
+  init_listeners()
+  requestAnimationFrame(draw)
+}
+
+function init_svgs(){
+  let paths = game.nodes_svg.querySelectorAll('path')
+  game.node_shapes = {}
+  paths.forEach( (path) => {
+    if(!path) return
+    let name = 'foo' // TODO get name from path ID
+    let points = path_to_points(path)
+    if(points)
+      game.node_shapes[name] = points
+  })
 }
 function path_to_points(path){
   let points = []
