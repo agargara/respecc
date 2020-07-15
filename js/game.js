@@ -102,6 +102,18 @@ function init_game(){
   if (game.options.autosave){
     game.autosave_timer = setInterval(save, game.options.autosave_interval)
   }
+  // temp: prepare svg data for testing
+  let testpath = document.querySelector('path')
+  game.testpoints = path_to_points(testpath)
+}
+function path_to_points(path){
+  let points = []
+  let len = path.getTotalLength()
+  let d = 10
+  for (let i=0; i<len; i++){
+    points.push(path.getPointAtLength(i*d))
+  }
+  return points
 }
 
 /*

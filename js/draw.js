@@ -169,6 +169,11 @@ function draw_node(ctx, node, game){
   ctx.fillStyle = color
   if (node.shape == 'heart'){
     draw_heart(ctx, x, y, w, h, true, false)
+  }else if (node.shape == 'svg'){
+    let points = game.testpoints
+    ctx.lineWidth = 10
+    ctx.strokeStyle = '#f60'
+    draw_points(ctx, points, 0.5)
   }else{
     // default shape: rounded rectangle
     draw_round_rect(ctx, x-w*0.5, y-h*0.5, w, h, h*0.5, true, false)
@@ -242,6 +247,16 @@ function get_color(theme, key1, key2){
     }
   }
   return color
+}
+
+// draw a portion of a point arrat
+function draw_points(ctx, points, portion){
+  let len = points.length*portion
+  ctx.beginPath()
+  ctx.moveTo(points[0].x,points[0].y)
+  for (let i=1; i<len; i++)
+    ctx.lineTo(points[i].x,points[i].y)
+  ctx.stroke()
 }
 
 /**
