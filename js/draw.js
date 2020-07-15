@@ -43,7 +43,7 @@ function animate(node, game){
   }
   // slowly reveal nodes
   if (node.outline_t!=undefined && node.outline_t < 1 && !node.hidden){
-    node.outline_t += (0.005*game.options.animation_speed)
+    node.outline_t += (0.02*game.options.animation_speed)
     if (node.outline_t >= 1.0){
       node.locked = false
       node.outline_t = undefined
@@ -120,7 +120,7 @@ export function draw_connection(ctx, node1, node2, game){
     t = node2.link_t
   let color
   // dashed line if destination is locked and visible
-  if (node2.locked && !node2.hidden){
+  if (node2.locked && !node2.hidden && !(node2.outline_t!=undefined && node2.outline_t < 1)){
     color = get_color(game.options.theme, 'nodes', 'link_locked')
     ctx.setLineDash([6, 6])
   }else{
@@ -177,43 +177,24 @@ function draw_node(ctx, node, game){
   let margin = game.options.node_text_margin
   let color = get_color(game.options.theme, 'nodes', node.status)
   ctx.fillStyle = color
-  if (node.shape == 'heart'){
-    draw_heart(ctx, x, y, w, h, true, false)
-  }else if (node.shape == 'lump' || node.shape == 'fat'){
-    let points = game.node_shapes[node.shape]
-    let t = 1.0
-    if (node.outline_t != undefined)
-      t = node.outline_t
-    draw_points(ctx, x-w*0.5, y-h*0.5, points, t)
-  }else{
-    // default shape: rounded rectangle
-    draw_round_rect(ctx, x-w*0.5, y-h*0.5, w, h, h*0.5, true, false)
+  // [optimize] probably would be faster to predraw
+  // node types onto a separate canvas once then copy that
+  let points = game.node_shapes[node.shape]
+  if (!points) {
+    if (node.pos[1] < 0)
+      points = game.node_shapes['defaultup']
+    else
+      points = game.node_shapes['defaultdown']
   }
+  let t = 1
+  if (node.outline_t != undefined)
+    t = node.outline_t
+  draw_points(ctx, x-w*0.5, y-h*0.5, points, t)
 
   let text = node.text[game.options.lang]
   if (text){
     text = text+'\nCost: '+node.cost+' SP'
     draw_node_text(ctx, text, x, y, w-margin, game.options)
-  }
-}
-
-function draw_heart(ctx, x, y, w, h, fill=false, stroke=false){
-  y += 4
-  h = h*0.5
-  w = w*0.75
-  let c1 = 2.5
-  let c2 = 0.75
-  ctx.beginPath()
-  ctx.moveTo(x, y+h)
-  ctx.bezierCurveTo(x-w, y+(h*c2), x-w, y-(h*c1), x, y-h)
-  ctx.bezierCurveTo(x+w, y-(h*c1), x+w, y+(h*c2), x, y+h)
-  //ctx.quadraticCurveTo(x+w, y-(h*c), x, y+h)
-  ctx.closePath()
-  if (fill) {
-    ctx.fill()
-  }
-  if (stroke) {
-    ctx.stroke()
   }
 }
 
@@ -263,17 +244,22 @@ function get_color(theme, key1, key2){
 // draw a portion of a point array
 function draw_points(ctx, x, y, points, portion, fill=true, stroke=false){
   let z = points.length
-  let len1 = Math.ceil(z*portion*0.5)
-  let len2 = z-len1
+  let len1 = z
+  if (portion < 1){
+    len1 = Math.ceil(z*portion*0.5)
+  }
   ctx.beginPath()
   // draw first half
   ctx.moveTo(points[0].x+x,points[0].y+y)
-  for (let i=1; i<=len1; i++)
+  for (let i=1; i<len1; i++)
     ctx.lineTo(points[i].x+x,points[i].y+y)
-  // draw second half
-  ctx.moveTo(points[0].x+x,points[0].y+y)
-  for (let i=z-1; i>=len2; i--)
-    ctx.lineTo(points[i].x+x,points[i].y+y)
+  if(portion<1){
+    let len2 = z-len1
+    // draw second half
+    ctx.moveTo(points[0].x+x,points[0].y+y)
+    for (let i=z-1; i>=len2; i--)
+      ctx.lineTo(points[i].x+x,points[i].y+y)
+  }
   ctx.closePath()
   if (fill) ctx.fill()
   if (stroke) ctx.stroke()
