@@ -2,31 +2,28 @@
 store xy position in character object and draw based on that
 characters handle their own animation
   HIGH
-  animations
-    when revealing hidden node:
-      1) link line extends
-      2) line splits and curves form node
-      3) node bgcolor and text fades in
-  player icons
+  icons
+    player icons
+    icons for resources instead of letters
+    write cost in corner of node
   permanent nodes
   bugfix: autopan weird with zoom
-  icons for resources instead of letters
-  write cost in corner of node
+  detailed description of current node
 
   MEDIUM
   character moves along curved path
-  better looking graphics
   menu with manual save/load, options
   save slots
   controls help
-  show hints
-  gradient background
+    show hints at appropriate times
   min zoom based on size of visible tree
   reveal entire areas instead of one node at a time
-  pan bugfix (mouse pan jumps sometimes??)
-  better looking UI
-  better color themes
-  graphics for character, resources, etc.
+
+  LOW
+  better looking graphics
+    pretty background
+    UI
+    color themes
 
   IDEAS
   make draw.js into class?
