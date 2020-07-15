@@ -24,7 +24,6 @@ export function init_tree(){
         0,
         -1
       ],
-      'shape': 'svg',
       'cost': 1,
       'text': {
         'en': 'Gain\n2 SP'
@@ -101,6 +100,7 @@ export function init_tree(){
         1,
         -2
       ],
+      'shape': 'lump',
       'cost': 2,
       'text': {
         'en': 'Gain\n1 fig'
@@ -124,6 +124,7 @@ export function init_tree(){
       'text': {
         'en': 'Gain\n1 worm'
       },
+      'shape': 'fat',
       'area': 'worms',
       'unlocks': [
         12,

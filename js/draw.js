@@ -15,6 +15,7 @@ export function draw_tree(ctx, game){
       let neighbor = tree[id]
       if(neighbor){
         if(!neighbor.hidden || neighbor.link_t != undefined){
+          animate(neighbor, game)
           draw_connection(ctx, node, neighbor, game)
         }
       }
@@ -25,11 +26,30 @@ export function draw_tree(ctx, game){
 
   // Draw nodes themselves
   nodes_to_draw.forEach(node => {
+    animate(node, game)
     draw_node(ctx, node, game)
   })
 }
 
-
+// process node animations
+function animate(node, game){
+  // slowly reveal connections
+  if (node.link_t!=undefined && node.link_t < 1){
+    node.link_t += (0.05*game.options.animation_speed)
+    if (node.link_t >= 1.0){
+      node.hidden = false
+      node.link_t = undefined
+    }
+  }
+  // slowly reveal nodes
+  if (node.outline_t!=undefined && node.outline_t < 1 && !node.hidden){
+    node.outline_t += (0.005*game.options.animation_speed)
+    if (node.outline_t >= 1.0){
+      node.locked = false
+      node.outline_t = undefined
+    }
+  }
+}
 /**
  * Draws a rounded rectangle using the current state of the canvas.
  * If you omit the last three params, it will draw a rectangle
@@ -96,18 +116,8 @@ export function draw_connection(ctx, node1, node2, game){
   let cy = y1
   // progress
   let t = 1.0
-  // slowly reveal nodes
-  if (node2.link_t!=undefined && node2.link_t < 1){
+  if (node2.link_t!=undefined)
     t = node2.link_t
-    node2.link_t += (0.05*game.options.animation_speed)
-    if (node2.link_t >= 1.0){
-      t = 1
-      node2.locked = false
-      node2.hidden = false
-      node2.link_t = undefined
-    }
-  }
-
   let color
   // dashed line if destination is locked and visible
   if (node2.locked && !node2.hidden){
@@ -169,12 +179,12 @@ function draw_node(ctx, node, game){
   ctx.fillStyle = color
   if (node.shape == 'heart'){
     draw_heart(ctx, x, y, w, h, true, false)
-  }else if (node.shape == 'svg'){
-    let points = game.node_shapes['foo'] // TODO
-    if(!points) return
-    ctx.lineWidth = 10
-    ctx.strokeStyle = '#f60'
-    draw_points(ctx, points, 0.5)
+  }else if (node.shape == 'lump' || node.shape == 'fat'){
+    let points = game.node_shapes[node.shape]
+    let t = 1.0
+    if (node.outline_t != undefined)
+      t = node.outline_t
+    draw_points(ctx, x-w*0.5, y-h*0.5, points, t)
   }else{
     // default shape: rounded rectangle
     draw_round_rect(ctx, x-w*0.5, y-h*0.5, w, h, h*0.5, true, false)
@@ -250,14 +260,23 @@ function get_color(theme, key1, key2){
   return color
 }
 
-// draw a portion of a point arrat
-function draw_points(ctx, points, portion){
-  let len = points.length*portion
+// draw a portion of a point array
+function draw_points(ctx, x, y, points, portion, fill=true, stroke=false){
+  let z = points.length
+  let len1 = Math.ceil(z*portion*0.5)
+  let len2 = z-len1
   ctx.beginPath()
-  ctx.moveTo(points[0].x,points[0].y)
-  for (let i=1; i<len; i++)
-    ctx.lineTo(points[i].x,points[i].y)
-  ctx.stroke()
+  // draw first half
+  ctx.moveTo(points[0].x+x,points[0].y+y)
+  for (let i=1; i<=len1; i++)
+    ctx.lineTo(points[i].x+x,points[i].y+y)
+  // draw second half
+  ctx.moveTo(points[0].x+x,points[0].y+y)
+  for (let i=z-1; i>=len2; i--)
+    ctx.lineTo(points[i].x+x,points[i].y+y)
+  ctx.closePath()
+  if (fill) ctx.fill()
+  if (stroke) ctx.stroke()
 }
 
 /**

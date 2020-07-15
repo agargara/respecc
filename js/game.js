@@ -92,14 +92,14 @@ window.onload = function(){
 
 function load_assets(){
   // TODO display "loading..."
-  load_file('../resources/nodes.svg', function(result){
+  load_file('./resources/nodes.svg', function(result){
     game.nodes_svg = result
     init_game()
   }, 'svg')
 }
 
 function init_game(){
-  // convert svg paths to point arrays
+  localStorage.removeItem('save')
   init_svgs()
   reset_all()
   canvas = document.getElementById('game_screen')
@@ -114,23 +114,23 @@ function init_game(){
   requestAnimationFrame(draw)
 }
 
+// convert svg paths to point arrays
 function init_svgs(){
   let paths = game.nodes_svg.querySelectorAll('path')
   game.node_shapes = {}
   paths.forEach( (path) => {
     if(!path) return
-    let name = 'foo' // TODO get name from path ID
+    let name = path.parentNode.getAttribute('id')
     let points = path_to_points(path)
-    if(points)
+    if(points && name)
       game.node_shapes[name] = points
   })
 }
 function path_to_points(path){
   let points = []
   let len = path.getTotalLength()
-  let d = 10
   for (let i=0; i<len; i++){
-    points.push(path.getPointAtLength(i*d))
+    points.push(path.getPointAtLength(i))
   }
   return points
 }
@@ -199,6 +199,7 @@ function respec(){
     node.status = 'deactivated'
     node.locked = true
     node.link_t = undefined
+    node.outline_t = undefined
   })
   tree['0'].locked = false
   // reset resources
@@ -257,6 +258,7 @@ function unlock_neighbors(node){
       tree[id].hidden = false
     }else{
       tree[id].link_t = 0
+      tree[id].outline_t = 0
     }
   })
 }
