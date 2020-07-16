@@ -236,6 +236,7 @@ function draw_characters(ctx, game){
     let pos = game.gridpos_to_realpos(chara.pos)
     // TODO draw just part of characters.png based on character class
     // TODO offset x&y when multiple characters on node
+    ctx.imageSmoothingEnabled = false
     ctx.drawImage(game.images.characters, pos[0]-offset, pos[1]-offset)
   })
 }
