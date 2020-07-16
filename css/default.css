@@ -38,6 +38,7 @@ canvas {
 .hint{
   font-size: 1.5em;
   top: 25%;
+  pointer-events: none;
 }
 
 #loading_overlay{

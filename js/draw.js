@@ -194,15 +194,25 @@ function draw_node(ctx, node, game){
     t = node.outline_t
   draw_points(ctx, x-w*0.5, y-h*0.5, points, t)
 
+  // don't draw text while node is animating
+  if (node.link_t!=undefined && node.link_t < 1) return
+  if (node.outline_t!=undefined && node.outline_t < 1) return
   let text = node.text[game.options.lang]
   if (text){
-    text = text+'\nCost: '+node.cost+' SP'
-    draw_node_text(ctx, text, x, y, w-margin, game.options)
+    draw_node_text(ctx, text, x, y, w-margin, game)
+  }
+  // draw cost in bottom left
+  if (node.status === 'deactivated'){
+    let costx = x-w*0.5+14
+    let costy = y+h*0.5-2
+    ctx.fillStyle = get_color(game.options.theme, 'nodes', 'cost')
+    draw_round_rect(ctx, costx-18, costy-14, 36, 24, 4, true, false)
+    draw_node_text(ctx, node.cost+' 🌰', costx, costy, w, game)
   }
 }
 
-function draw_node_text(ctx, text, x, y, max_width, options){
-  ctx.fillStyle = get_color(options.theme, 'nodes', 'text')
+function draw_node_text(ctx, text, x, y, max_width, game){
+  ctx.fillStyle = get_color(game.options.theme, 'nodes', 'text')
   ctx.textAlign = 'center'
   let size = 12
   ctx.font = size + 'px sans-serif'
@@ -212,6 +222,11 @@ function draw_node_text(ctx, text, x, y, max_width, options){
   lines.forEach((line, i) => {
     ctx.fillText(line, x, y+(i*size)-yoffset)
   })
+  /* TODO
+  // replace SP with image
+  ctx.imageSmoothingEnabled = false
+  ctx.drawImage(game.images.sp, x, y) */
+
 }
 
 function draw_outlines(ctx, game){

@@ -7,7 +7,10 @@ export function init_tree(){
       ],
       'cost': 0,
       'text': {
-        'en': 'Gain\n1 SP'
+        'en': '+1 🌰'
+      },
+      'detail': {
+        'en': 'Gain 1 🌰'
       },
       'area': 'Ground',
       'unlocks': [
@@ -26,7 +29,7 @@ export function init_tree(){
       ],
       'cost': 1,
       'text': {
-        'en': 'Gain\n2 SP'
+        'en': '+2 🌰'
       },
       'area': 'trunk',
       'unlocks': [
@@ -45,7 +48,7 @@ export function init_tree(){
       ],
       'cost': 1,
       'text': {
-        'en': 'Gain\n1 SP\non respec'
+        'en': '+1 🌰\non respec'
       },
       'area': 'trunk',
       'unlocks': [
@@ -64,7 +67,7 @@ export function init_tree(){
       ],
       'cost': 2,
       'text': {
-        'en': 'Gain\n3 SP'
+        'en': '+3 🌰'
       },
       'area': 'trunk',
       'unlocks': [
@@ -83,7 +86,7 @@ export function init_tree(){
       ],
       'cost': 2,
       'text': {
-        'en': 'Gain\n2 SP\non respec'
+        'en': '+2 🌰\non respec'
       },
       'area': 'trunk',
       'unlocks': [
@@ -102,7 +105,7 @@ export function init_tree(){
       ],
       'cost': 2,
       'text': {
-        'en': 'Gain\n1 fig'
+        'en': '+1 🍊'
       },
       'area': 'figs',
       'shape': 'lump',
@@ -122,7 +125,7 @@ export function init_tree(){
       ],
       'cost': 2,
       'text': {
-        'en': 'Gain\n1 worm'
+        'en': '+1 🐛'
       },
       'shape': 'fat',
       'area': 'worms',
@@ -142,7 +145,7 @@ export function init_tree(){
       ],
       'cost': 4,
       'text': {
-        'en': 'Gain\n4 SP'
+        'en': '+4 🌰'
       },
       'area': 'trunk',
       'unlocks': [],
@@ -158,7 +161,7 @@ export function init_tree(){
       ],
       'cost': 4,
       'text': {
-        'en': 'Gain\n3 SP on respec'
+        'en': '+3 🌰 on respec'
       },
       'area': 'roots',
       'unlocks': [],
@@ -174,7 +177,7 @@ export function init_tree(){
       ],
       'cost': 6,
       'text': {
-        'en': 'Gain\n1 SP per\nactive node'
+        'en': '+1 🌰 per\nactive node'
       },
       'area': 'trunk',
       'unlocks': [],
@@ -193,7 +196,7 @@ export function init_tree(){
       ],
       'cost': 4,
       'text': {
-        'en': 'Gain\n0.5 SP per\nactive node\non respec'
+        'en': '+0.5 🌰 per\nactive node\non respec'
       },
       'area': 'roots',
       'unlocks': [],
@@ -216,7 +219,7 @@ export function init_tree(){
       ],
       'cost': 4,
       'text': {
-        'en': 'Gain\n2 figs'
+        'en': '+2 🍊'
       },
       'area': 'figs',
       'shape': 'lump',
@@ -233,7 +236,7 @@ export function init_tree(){
       ],
       'cost': 4,
       'text': {
-        'en': 'Gain\n2 worms'
+        'en': '+2 🐛'
       },
       'area': 'worms',
       'unlocks': [],
@@ -249,7 +252,7 @@ export function init_tree(){
       ],
       'cost': 4,
       'text': {
-        'en': 'Unlock\nfig→SP\nconversion'
+        'en': 'Unlock\n🍊→🌰\nconversion'
       },
       'area': 'figs',
       'shape': 'lump',
@@ -266,7 +269,7 @@ export function init_tree(){
       ],
       'cost': 4,
       'text': {
-        'en': 'Worms decrease\nSP cost of all\n underground nodes'
+        'en': '🐛 decrease\n🌰 cost of all\n underground nodes'
       },
       'area': 'worms',
       'unlocks': [],

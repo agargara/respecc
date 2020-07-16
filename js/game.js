@@ -2,9 +2,7 @@
 store xy position in character object and draw based on that
 characters handle their own animation
   HIGH
-  icons
-    icons for resources instead of letters
-    write cost in corner of node
+  BUGFIX: pan not working anymore due to overlay?!
   permanent nodes
   bugfix: autopan weird with zoom
   detailed description of current node
@@ -64,7 +62,8 @@ game.options={
       'deactivated': '#9a9',
       'activated': '#fff',
       'selected': '#efe',
-      'text': '#000'
+      'text': '#000',
+      'cost': '#4d7250'
     }
   }
 }
@@ -92,7 +91,8 @@ function load_assets(){
   document.getElementById('loading_overlay').classList.remove('hidden')
   const promises = [
     get('./resources/nodes.svg', 'svg'),
-    load_image('./img/characters.png')
+    load_image('./img/characters.png'),
+    load_image('./img/sp.png'),
   ]
   Promise.allSettled(promises).
     then((results) => {
@@ -100,12 +100,13 @@ function load_assets(){
         game.nodes_svg = results[0].value
       if (results[1].status === 'fulfilled')
         game.images['characters'] = results[1].value
+      if (results[2].status === 'fulfilled')
+        game.images['sp'] = results[2].value
       init_game()
     })
 }
 
 function init_game(){
-  localStorage.removeItem('save')
   init_svgs()
   reset_all()
   canvas = document.getElementById('game_screen')
@@ -230,9 +231,9 @@ function reset_all(){
   characters = init_characters(game)
   game.characters = characters
   game.resources = {
-    'sp': {'name': 'SP', 'amount': 0, 'show': true},
-    'figs': {'name': 'Figs', 'amount': 0},
-    'worms':  {'name': 'Worms', 'amount': 0}
+    'sp': {'name': '🌰', 'amount': 0, 'show': true},
+    'figs': {'name': '🍊', 'amount': 0},
+    'worms':  {'name': '🐛', 'amount': 0}
   }
   game.unlocks = {}
   game.state = {
@@ -306,7 +307,11 @@ game.gridpos_to_realpos = function(gridpos){
 function init_listeners(){
   window.addEventListener('resize', resize)
   // button events
-  document.getElementById('btn_reset').addEventListener('click', reset_all)
+  document.getElementById('btn_reset').addEventListener('click', ()=>{
+    // TODO delete save is for debug purposes only
+    localStorage.removeItem('save')
+    reset_all
+  })
   // get display transform to handle zoom and pan
   display_transform = get_display_transform(ctx, canvas, mouse)
   // listen for keyboard events
