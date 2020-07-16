@@ -6,26 +6,56 @@ export class DefaultDict {
   }
 }
 
-export function load_file(path, callback, type){
-  let xmlHTTP = new XMLHttpRequest()
-  xmlHTTP.open('GET', path)
-  xmlHTTP.send()
-  xmlHTTP.onload = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      let response
-      if (type == 'xml'){
-        response = this.responseXML
-      }else if (type == 'svg'){
-        // [optimize] there might be a better way to do this
-        let div = document.createElement('div')
-        div.innerHTML = this.responseText
-        response = div.querySelector('svg')
-      }else{
-        response = this.responseText
+export function get (url, type) {
+  return new Promise(function (resolve, reject) {
+    var xhr = new XMLHttpRequest()
+    xhr.open('GET', url)
+    if (type === 'blob')
+      xhr.responseType = 'blob'
+    xhr.onload = function () {
+      if (this.status >= 200 && this.status < 300) {
+        let response
+        if (type === 'xml'){
+          response = xhr.responseXML
+        }else if (type === 'svg'){
+          // [optimize] there might be a better way to do this
+          let div = document.createElement('div')
+          div.innerHTML = xhr.responseText
+          response = div.querySelector('svg')
+        }else if (type === 'text'){
+          response = xhr.responseText
+        } else {
+          response = xhr.response
+        }
+        resolve(response)
+      } else {
+        reject({
+          status: this.status,
+          statusText: xhr.statusText
+        })
       }
-      callback(response)
     }
-  }
+    xhr.onerror = function () {
+      reject({
+        status: this.status,
+        statusText: xhr.statusText
+      })
+    }
+    xhr.send()
+  })
+}
+
+export function load_image (url) {
+  return new Promise(function (resolve, reject) {
+    let img = new Image()
+    img.src = url
+    img.onload = function () {
+      resolve(img)
+    }
+    img.onerror = function () {
+      reject()
+    }
+  })
 }
 
 // [optimize] this could create recursion hell...

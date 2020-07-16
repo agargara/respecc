@@ -21,14 +21,17 @@ export function draw_tree(ctx, game){
       }
     })
   })
-  // Draw characters
-  draw_characters(ctx, game)
+  // Draw node outlines
+  draw_outlines(ctx, game)
 
   // Draw nodes themselves
   nodes_to_draw.forEach(node => {
     animate(node, game)
     draw_node(ctx, node, game)
   })
+
+  // Draw characters
+  draw_characters(ctx, game)
 }
 
 // process node animations
@@ -211,17 +214,29 @@ function draw_node_text(ctx, text, x, y, max_width, options){
   })
 }
 
-function draw_characters(ctx, game){
-  // Draw outlines for each character
+function draw_outlines(ctx, game){
+  // Draw each character
+  let h = game.options.node_size
+  let w = h*1.618033989
   Object.values(game.characters).forEach(chara => {
     let pos = game.gridpos_to_realpos(chara.pos)
     let [x,y] = [pos[0], pos[1]]
-    let h = game.options.node_size
-    let w = h*1.618033989
+    // draw outline
     ctx.lineWidth = 12
     ctx.setLineDash([])
     ctx.strokeStyle = chara.color
     draw_round_rect(ctx, x-w*0.5, y-h*0.5, w, h, h*0.5, false, true)
+  })
+}
+
+function draw_characters(ctx, game){
+  // Draw each character
+  let offset = game.options.node_size-16
+  Object.values(game.characters).forEach(chara => {
+    let pos = game.gridpos_to_realpos(chara.pos)
+    // TODO draw just part of characters.png based on character class
+    // TODO offset x&y when multiple characters on node
+    ctx.drawImage(game.images.characters, pos[0]-offset, pos[1]-offset)
   })
 }
 

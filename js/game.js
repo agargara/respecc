@@ -2,6 +2,7 @@
 store xy position in character object and draw based on that
 characters handle their own animation
   HIGH
+  method to display text
   icons
     player icons
     icons for resources instead of letters
@@ -32,7 +33,7 @@ characters handle their own animation
     use bones to cast dark magic
 */
 
-import {load_file, deep_copy, hit_circle, get_display_transform, DefaultDict} from './util.js'
+import {get, load_image, deep_copy, hit_circle, get_display_transform, DefaultDict} from './util.js'
 import {draw_tree} from './draw.js'
 import {init_tree} from './tree.js'
 import {init_characters} from './characters.js'
@@ -69,6 +70,7 @@ game.options={
     }
   }
 }
+game.images = {}
 var canvas, ctx            // canvas and drawing context
 var vw, vh                 // viewport height/width
 var keys_pressed = {}
@@ -88,11 +90,19 @@ window.onload = function(){
 }
 
 function load_assets(){
-  // TODO display "loading..."
-  load_file('./resources/nodes.svg', function(result){
-    game.nodes_svg = result
-    init_game()
-  }, 'svg')
+  document.getElementById('loading_overlay').classList.remove('hidden')
+  const promises = [
+    get('./resources/nodes.svg', 'svg'),
+    load_image('./img/characters.png')
+  ]
+  Promise.allSettled(promises).
+    then((results) => {
+      if (results[0].status === 'fulfilled')
+        game.nodes_svg = results[0].value
+      if (results[1].status === 'fulfilled')
+        game.images['characters'] = results[1].value
+      init_game()
+    })
 }
 
 function init_game(){
@@ -108,6 +118,7 @@ function init_game(){
     game.autosave_timer = setInterval(save, game.options.autosave_interval)
   }
   init_listeners()
+  document.getElementById('loading_overlay').classList.add('hidden')
   requestAnimationFrame(draw)
 }
 
