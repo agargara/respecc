@@ -33,7 +33,7 @@ export function init_tree(){
         3,
         5
       ],
-      'hidden': false,
+      'hidden': true,
       'onactivate': function(game){
         game.resources.sp.amount += 2
       }
@@ -52,7 +52,7 @@ export function init_tree(){
         4,
         6
       ],
-      'hidden': false,
+      'hidden': true,
       'onactivate': function(game){
         game.onrespec.resources.sp += 1
       }
@@ -100,12 +100,12 @@ export function init_tree(){
         1,
         -2
       ],
-      'shape': 'lump',
       'cost': 2,
       'text': {
         'en': 'Gain\n1 fig'
       },
       'area': 'figs',
+      'shape': 'lump',
       'unlocks': [
         11,
         13
@@ -219,6 +219,7 @@ export function init_tree(){
         'en': 'Gain\n2 figs'
       },
       'area': 'figs',
+      'shape': 'lump',
       'unlocks': [],
       'hidden': true,
       'onactivate': function(game){
@@ -251,6 +252,7 @@ export function init_tree(){
         'en': 'Unlock\nfig→SP\nconversion'
       },
       'area': 'figs',
+      'shape': 'lump',
       'unlocks': [],
       'hidden': true,
       'onactivate': function(game){

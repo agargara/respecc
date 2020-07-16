@@ -2,9 +2,7 @@
 store xy position in character object and draw based on that
 characters handle their own animation
   HIGH
-  method to display text
   icons
-    player icons
     icons for resources instead of letters
     write cost in corner of node
   permanent nodes
@@ -71,6 +69,7 @@ game.options={
   }
 }
 game.images = {}
+game.hide_hint = {}
 var canvas, ctx            // canvas and drawing context
 var vw, vh                 // viewport height/width
 var keys_pressed = {}
@@ -160,7 +159,7 @@ function load(){
 }
 
 function save(){
-  update_status('save', 'saving')
+  update_status('save', 'saving', false)
   let save = {
     'state': game.state,
     'resources': game.resources,
@@ -192,6 +191,8 @@ function current_character(){
 }
 
 function respec(){
+  let h = game.hide_hint['respec']
+  if (h) h()
   // run pre-respec functions
   game.onrespec.pre.forEach((f) => {
     f()
@@ -243,6 +244,20 @@ function reset_all(){
     node.locked = true
   })
   tree['0'].locked = false
+  // display purchase node hint after 5 seconds
+  window.setTimeout(() => {
+    let wasd_hint = function(){
+      if (current_node_id() == 0 && tree['1'].status != 'activated' && tree['2'].status != 'activated'){
+        // display wasd hint if player hasn't moved
+        hint(get_string('hints','wasd'), game, 'wasd')
+      }
+    }
+    if (current_node_id() == 0 && tree['0'].status != 'activated'){
+      hint(get_string('hints','purchasenode'), game, 'purchasenode', wasd_hint, 2000)
+    }else{
+      wasd_hint()
+    }
+  }, 3000)
 }
 
 /*
@@ -328,6 +343,8 @@ function handle_keyboard_input(){
   handle_movement()
   // Spacebar: activate current node
   if (keys_pressed[' ']){
+    let h = game.hide_hint['purchasenode']
+    if (h) h()
     let n = current_node()
     if (n.status == 'deactivated' && can_activate(n)){
       // update cost
@@ -337,6 +354,10 @@ function handle_keyboard_input(){
       n.status = 'activated'
       unlock_neighbors(n)
       update_hud()
+      // show respec hint when out of SP
+      if (game.resources.sp.amount == 0){
+        hint(get_string('hints','respec'), game, 'respec')
+      }
     }
   }
 }
@@ -362,6 +383,8 @@ function handle_movement(){
     keys_pressed.d = keys_pressed.ArrowRight = false
   }
   if (dy == 0 && dx == 0) return
+  let h = game.hide_hint['wasd']
+  if (h) h()
   let angle = Math.atan2(dy, dx)
 
   // find closest unlocked node to current character in direction
@@ -462,16 +485,16 @@ function draw(){
 /*
   [UI] altering the interface and view
 */
-function update_status(category, status){
+function update_status(category, status, fade=true){
   let elem = document.getElementById('status')
-  // Show status
-  elem.classList.remove('fadeout')
-  // Trigger re-flow to ensure animation restarts
-  void elem.offsetWidth
   let text = get_string(category,status)
   elem.textContent = text
-  // Fade out status
-  elem.classList.add('fadeout')
+  elem.classList.remove('fadeout')
+  if(fade){
+    // Trigger re-flow to ensure animation restarts
+    void elem.offsetWidth
+    elem.classList.add('fadeout')
+  }
 }
 
 function get_string(category, status){
@@ -490,6 +513,21 @@ function update_hud(){
     }
   })
   document.getElementById('resources').textContent = restxt
+}
+
+// Display hint text
+async function hint(text, game, hintid, callback){
+  var container = document.getElementById('hints')
+  var elem = document.createElement('div')
+  elem.innerHTML = text
+  container.appendChild(elem)
+  // hide hint after trigger
+  let promise = new Promise((resolve) => { game.hide_hint[hintid] = resolve })
+  await promise.then(() => {
+    container.removeChild(elem)
+    if (callback)
+      callback()
+  })
 }
 
 function debug(thing){
