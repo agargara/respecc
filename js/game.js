@@ -2,7 +2,6 @@
 store xy position in character object and draw based on that
 characters handle their own animation
   HIGH
-  bugfix: autopan weird with zoom
   detailed description of current node
 
   MEDIUM
@@ -78,7 +77,6 @@ var mouse = {
   over : false, // mouseover
   btnmask : [1, 2, 4, 6, 5, 3]
 }
-var display_transform
 
 window.onload = function(){
   load_assets()
@@ -325,7 +323,7 @@ function init_listeners(){
     })
   })
   // get display transform to handle zoom and pan
-  display_transform = get_display_transform(ctx, canvas, mouse)
+  game.display_transform = get_display_transform(ctx, canvas, mouse)
   // listen for keyboard events
   document.addEventListener('keydown', function (e) {
     keys_pressed[e.key] = true
@@ -487,17 +485,19 @@ function click(x, y){
 */
 function draw(){
   // update the transform
-  display_transform.update()
+  game.display_transform.update()
   // set home transform to clear the screem
-  display_transform.setHome()
+  game.display_transform.setHome()
   // draw background
   // [optimize] only redraw necessary parts?
   ctx.rect(0, 0, canvas.width, canvas.height)
   ctx.fillStyle = game.options.theme.bgcolor
   ctx.fill()
   // draw tree
-  display_transform.setTransform()
+  game.display_transform.setTransform()
   draw_tree(ctx, game)
+  if (game.debugtext)
+    draw_debug_text(ctx, game.debugtext)
   requestAnimationFrame(draw)
 }
 
@@ -571,22 +571,41 @@ game.autopan = function(){
   let [x,y] = game.gridpos_to_realpos(pos)
   let w = canvas.width * 0.5
   let h = canvas.height * 0.5
-  // calculate distance from center
-  let dx = x - display_transform.x - w
-  let dy = y - display_transform.y - h
+  let dt = game.display_transform
+  let mat = dt.matrix
+  // calculate distance from center of canvas
+  let center_x = mat[4]-w
+  let center_y = mat[5]-h
+  // adjust player pos based on scale
+  x *= mat[0]
+  y *= mat[3]
+  let dx = x + center_x
+  let dy = y + center_y
   let m = game.options.autopan_margin
   if (dx > w*m){
     // pan right
-    display_transform.x = (-w*m)-w+x
+    dt.x = -(w*m+w-x-dt.cox)/mat[0]
   }else if (-dx > w*m){
     // pan left
-    display_transform.x = w*m-w+x
+    dt.x = (w*m-w+x+dt.cox)/mat[0]
   }
   if (dy > h*m){
     // pan down
-    display_transform.y = (-h*m)-h+y
+    dt.y = -(h*m+h-y-dt.coy)/mat[0]
   }else if (-dy > h*m){
     // pan up
-    display_transform.y = h*m-h+y
+    dt.y = (h*m-h+y+dt.coy)/mat[0]
   }
+}
+
+function draw_debug_text(ctx, text){
+  ctx.fillStyle = '#fff'
+  ctx.textAlign = 'right'
+  ctx.font = '12px sans-serif'
+  let x = canvas.width-12, y = 24
+  let lines = text.split('\n')
+  game.display_transform.setHome()
+  lines.forEach((line, i) => {
+    ctx.fillText(line, x, y+(i*12))
+  })
 }
