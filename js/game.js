@@ -2,7 +2,6 @@
 store xy position in character object and draw based on that
 characters handle their own animation
   HIGH
-  permanent nodes
   bugfix: autopan weird with zoom
   detailed description of current node
 
@@ -204,17 +203,19 @@ function respec(){
   })
   // reset activated nodes
   Object.values(tree).forEach(node => {
-    node.status = 'deactivated'
+    if (!(node.permanent && node.status === 'activated'))
+      node.status = 'deactivated'
     node.locked = true
+    node.selected = false
+    // cancel animations
     node.link_t = undefined
     node.outline_t = undefined
-    node.selected = false
   })
   tree['0'].locked = false
   tree['0'].selected = true
   // reset resources
   Object.values(game.resources).forEach((res) => {
-    res.amount = 0
+    res.amount = res.permanent
   })
   // gain respec resources
   Object.entries(game.onrespec.resources).forEach(([k, res]) => {
@@ -231,10 +232,14 @@ function reset_all(){
   characters = init_characters(game)
   game.characters = characters
   game.resources = {
-    'sp': {'name': '🌰', 'amount': 0, 'show': true},
-    'figs': {'name': '🍊', 'amount': 0},
-    'worms':  {'name': '🐛', 'amount': 0}
+    'sp': {'name': '🌰', 'show': true},
+    'figs': {'name': '🍊'},
+    'worms':  {'name': '🐛'}
   }
+  Object.values(game.resources).forEach((res)=>{
+    res.amount = 0
+    res.permanent = 0
+  })
   game.unlocks = {}
   game.state = {
     'current_character': 'arborist'
@@ -312,6 +317,12 @@ function init_listeners(){
     update_status('resetting all')
     localStorage.removeItem('save')
     reset_all
+  })
+  document.getElementById('btn_cheat').addEventListener('click', ()=>{
+    Object.values(game.resources).forEach((res)=>{
+      res.amount += 100
+      update_hud()
+    })
   })
   // get display transform to handle zoom and pan
   display_transform = get_display_transform(ctx, canvas, mouse)

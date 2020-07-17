@@ -149,7 +149,7 @@ export function init_tree(){
         'en': '+5 🌰'
       },
       'area': 'trunk',
-      'unlocks': [],
+      'unlocks': [15],
       'hidden': true,
       'onactivate': function(game){
         game.resources.sp.amount += 5
@@ -281,6 +281,27 @@ export function init_tree(){
       'onactivate': function(game){
         game.unlocks.wormspbonus = true
       }
+    },
+    '15': {
+      'pos': [
+        -3,
+        -3
+      ],
+      'cost': 8,
+      'text': {
+        'en': '+1 🌰\n(permanent)'
+      },
+      'detail': {
+        'en': 'Permanently gain +1 🌰.'
+      },
+      'area': 'trunk',
+      'unlocks': [],
+      'hidden': true,
+      'onactivate': function(game){
+        game.resources.sp.permanent += 1
+        game.resources.sp.amount += 1
+      },
+      'permanent': true
     }
   }
 }
