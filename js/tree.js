@@ -20,7 +20,8 @@ export function init_tree(){
       'hidden': false,
       'onactivate': function(game){
         game.resources.sp.amount += 1
-      }
+      },
+      'selected': true
     },
     '1': {
       'pos': [
@@ -145,13 +146,13 @@ export function init_tree(){
       ],
       'cost': 4,
       'text': {
-        'en': '+4 🌰'
+        'en': '+5 🌰'
       },
       'area': 'trunk',
       'unlocks': [],
       'hidden': true,
       'onactivate': function(game){
-        game.resources.sp.amount += 4
+        game.resources.sp.amount += 5
       }
     },
     '8': {
@@ -175,9 +176,9 @@ export function init_tree(){
         -1,
         -3
       ],
-      'cost': 6,
+      'cost': 4,
       'text': {
-        'en': '+1 🌰 per\nactive node'
+        'en': '+0.5 🌰 per\nactive node'
       },
       'area': 'trunk',
       'unlocks': [],
@@ -269,7 +270,10 @@ export function init_tree(){
       ],
       'cost': 4,
       'text': {
-        'en': '🐛 decrease\n🌰 cost of all\n underground nodes'
+        'en': '🐛→🌰 discount'
+      },
+      'detail': {
+        'en': '🌰 cost of underground nodes is reduced by 0.5 per 🐛.'
       },
       'area': 'worms',
       'unlocks': [],

@@ -21,9 +21,6 @@ export function draw_tree(ctx, game){
       }
     })
   })
-  // Draw node outlines
-  draw_outlines(ctx, game)
-
   // Draw nodes themselves
   nodes_to_draw.forEach(node => {
     animate(node, game)
@@ -189,10 +186,18 @@ function draw_node(ctx, node, game){
     else
       points = game.node_shapes['defaultdown']
   }
+  // partial outline when animating
   let t = 1
   if (node.outline_t != undefined)
     t = node.outline_t
-  draw_points(ctx, x-w*0.5, y-h*0.5, points, t)
+  // add stroke if node is selected
+  if (node.selected){
+    color = get_color(game.options.theme, 'nodes', 'selected')
+    ctx.strokeStyle = color
+    ctx.lineWidth = 8
+    ctx.setLineDash([])
+  }
+  draw_points(ctx, x-w*0.5, y-h*0.5, points, t, true, node.selected)
 
   // don't draw text while node is animating
   if (node.link_t!=undefined && node.link_t < 1) return
@@ -227,21 +232,6 @@ function draw_node_text(ctx, text, x, y, max_width, game){
   ctx.imageSmoothingEnabled = false
   ctx.drawImage(game.images.sp, x, y) */
 
-}
-
-function draw_outlines(ctx, game){
-  // Draw each character
-  let h = game.options.node_size
-  let w = h*1.618033989
-  Object.values(game.characters).forEach(chara => {
-    let pos = game.gridpos_to_realpos(chara.pos)
-    let [x,y] = [pos[0], pos[1]]
-    // draw outline
-    ctx.lineWidth = 12
-    ctx.setLineDash([])
-    ctx.strokeStyle = chara.color
-    draw_round_rect(ctx, x-w*0.5, y-h*0.5, w, h, h*0.5, false, true)
-  })
 }
 
 function draw_characters(ctx, game){

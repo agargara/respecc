@@ -2,7 +2,6 @@
 store xy position in character object and draw based on that
 characters handle their own animation
   HIGH
-  BUGFIX: pan not working anymore due to overlay?!
   permanent nodes
   bugfix: autopan weird with zoom
   detailed description of current node
@@ -53,15 +52,14 @@ game.options={
   'autopan': true,
   'autopan_margin': 0.5,
   'theme': {
-    'default': '#000',
+    'default': '#f00',
     'bgcolor': '#080E07', // rich black
-    'selected_node': '#f00',
     'nodes': {
       'link': '#fff',
       'link_locked': '#999',
       'deactivated': '#9a9',
       'activated': '#fff',
-      'selected': '#efe',
+      'selected': '#8E9B58',
       'text': '#000',
       'cost': '#4d7250'
     }
@@ -210,8 +208,10 @@ function respec(){
     node.locked = true
     node.link_t = undefined
     node.outline_t = undefined
+    node.selected = false
   })
   tree['0'].locked = false
+  tree['0'].selected = true
   // reset resources
   Object.values(game.resources).forEach((res) => {
     res.amount = 0
@@ -309,6 +309,7 @@ function init_listeners(){
   // button events
   document.getElementById('btn_reset').addEventListener('click', ()=>{
     // TODO delete save is for debug purposes only
+    update_status('resetting all')
     localStorage.removeItem('save')
     reset_all
   })
@@ -423,6 +424,8 @@ function handle_movement(){
   if(closest_node_id != null){
     // stop existing movement
     c.cancel_movement()
+    let cn = current_node()
+    cn.selected = false
     c.move(closest_node_id)
   }
 }
@@ -492,7 +495,9 @@ function draw(){
 */
 function update_status(category, status, fade=true){
   let elem = document.getElementById('status')
-  let text = get_string(category,status)
+  let text = category
+  if (status)
+    text = get_string(category,status)
   elem.textContent = text
   elem.classList.remove('fadeout')
   if(fade){

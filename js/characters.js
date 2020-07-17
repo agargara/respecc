@@ -37,6 +37,7 @@ class Character {
       this.pos = Array.from(target_pos)
       this.current_node = target
       this.visited_nodes[target] = true
+      this.tree[target].selected = true
       return
     }
     this.pos[0] += dx*0.1
