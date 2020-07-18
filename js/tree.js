@@ -29,9 +29,6 @@ export function init_tree(){
       'text': {
         'en': '+2 🌰'
       },
-      'detail': {
-        'en': 'Every universe is covered by seven layers — earth, water, fire, air, sky, the total energy and false ego — each ten times greater than the previous one. There are innumerable universes besides this one, and although they are unlimitedly large, they move about like atoms in You. Therefore You are called unlimited [ananta].'
-      },
       'area': 'trunk',
       'unlocks': [
         3,
@@ -178,16 +175,19 @@ export function init_tree(){
       ],
       'cost': 4,
       'text': {
-        'en': '+0.5 🌰 per\nactive node'
+        'en': '+0.5 🌰 per\nactive node\n(max 8)'
       },
       'area': 'trunk',
       'unlocks': [],
       'hidden': true,
       'onactivate': function(game){
+        let amount = 0
         Object.values(game.tree).forEach(node => {
           if (node.status == 'activated' )
-            game.resources.sp.amount += 0.5
+            amount += 0.5
         })
+        if (amount > 8) amount = 8
+        game.resources.sp.amount += amount
       }
     },
     '10': {
@@ -197,18 +197,22 @@ export function init_tree(){
       ],
       'cost': 4,
       'text': {
-        'en': '+0.5 🌰 per active node on respec'
+        'en': '+0.5 🌰 per active node on respec (max 8)'
       },
+      'shape': 'fat',
       'area': 'roots',
       'unlocks': [],
       'hidden': true,
       'onactivate': function(game){
         game.onrespec.pre.push(
           function(){
+            let amount = 0
             Object.values(game.tree).forEach(node => {
               if (node.status == 'activated' )
-                game.onrespec.resources.sp += 0.5
+                amount += 0.5
             })
+            if (amount > 8) amount = 8
+            game.onrespec.resources.sp += amount
           }
         )
       }
@@ -253,7 +257,7 @@ export function init_tree(){
       ],
       'cost': 4,
       'text': {
-        'en': '🍊→🌰'
+        'en': 'unlock\n🍊→🌰'
       },
       'detail': {
         'en': 'Unlock the ability to convert 🍊 to 🌰. Starting rate is 1🍊→2🌰.'
@@ -342,7 +346,6 @@ export function init_tree(){
       'onactivate': function(game){
         game.resources.sp.amount += 10
       },
-      'permanent': true
     },
   }
 }

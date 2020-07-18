@@ -1,5 +1,6 @@
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Vilagfa</title>
   <link rel="stylesheet" href="css/default.css">
   <script type="module" src="js/game.js"></script>
@@ -8,7 +9,7 @@
   <div id="loading_overlay" class="center_container"><h1>Loading...</h1></div>
   <div id="hints" class="hint center_container"></div>
   <div id="hud">
-    <span id="resources"></span>
+    <span id="hud_resources"></span>
     <span id="status"></span>
   </div>
   <div id="tree" class="tab">
@@ -16,7 +17,20 @@
     </canvas>
   </div>
   <div id="resources" class="menu tab hidden">
-    Resources go here
+    <div id="resource_list"></div>
+    <div id="resource_conversion" class="hidden">
+      <button id="btn_convert" class="btn_standard">Convert</button>
+      <input type='number' id='num_convert_a' min='1' value='1'>
+      <select name="convert_res_a" id="convert_res_a">
+        <option value="figs">🍊</option>
+      </select>
+       to
+      <input type='number' id='num_convert_b' min='0' value='' readonly>
+      <select name="convert_res_b" id="convert_res_b">
+        <option value="sp">🌰</option>
+      </select>
+      <div id='conversion_error'></div>
+    </div>
   </div>
   <div id="options" class="menu tab hidden">
     Options go here

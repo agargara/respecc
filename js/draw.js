@@ -173,14 +173,22 @@ function draw_text(ctx, text, x, y, max_width, game, text_align='center'){
   ctx.textAlign = text_align
   let size = 12
   ctx.font = size + 'px sans-serif'
-  let h = ctx.measureText('M').width
   let lines =  word_wrap(ctx, text, max_width)
-  let yoffset = (lines.length*0.5*size)-h
+  // shrink text to fit in 3 lines
+  while (lines.length > 3){
+    size -= 0.5
+    ctx.font = size + 'px sans-serif'
+    lines =  word_wrap(ctx, text, max_width)
+  }
+  let lineheight = size+2
+  let yoffset = lineheight*0.5*(lines.length-1)-size*0.5
+  if (lines.length > 2)
+    yoffset += size*0.25
   lines.forEach((line, i) => {
-    ctx.fillText(line, x, y+(i*size)-yoffset)
+    ctx.fillText(line, x, y+(i*lineheight)-yoffset)
   })
   /* TODO
-  // replace SP with image
+  // replace emoji with images
   ctx.imageSmoothingEnabled = false
   ctx.drawImage(game.images.sp, x, y) */
 }

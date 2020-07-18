@@ -6,6 +6,12 @@ export class DefaultDict {
   }
 }
 
+export function clearelem(elem){
+  while(elem.firstChild){
+    elem.removeChild(elem.firstChild)
+  }
+}
+
 export function get (url, type) {
   return new Promise(function (resolve, reject) {
     var xhr = new XMLHttpRequest()

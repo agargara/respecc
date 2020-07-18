@@ -1,15 +1,7 @@
 /* TODO
   HIGH
-  disable key& mouse listeners when tab is hidden
-  TABS at top to switch between screens
-  - tree
-  - resources
-    - buy/sell
-  - options
-    - save/load
-    - animation speed
   add more nodes
-  implement worms and figs
+  implement worms
 
   MEDIUM
   use own icons instead of emojis
@@ -21,6 +13,7 @@
   min zoom based on size of visible tree
   reveal entire areas instead of one node at a time
   NEW CHARACTER!!!
+  resource autoconversion skill
 
   LOW
   character pathfinding
@@ -37,9 +30,13 @@
   dark magic - bonemancy
     collect bones
     use bones to cast dark magic
+
+    'detail': {
+      'en': 'Every universe is covered by seven layers — earth, water, fire, air, sky, the total energy and false ego — each ten times greater than the previous one. There are innumerable universes besides this one, and although they are unlimitedly large, they move about like atoms in You. Therefore You are called unlimited [ananta].'
+    },
 */
 
-import {get, load_image, deep_merge, hit_circle, get_display_transform, DefaultDict} from './util.js'
+import {clearelem, get, load_image, deep_merge, hit_circle, get_display_transform, DefaultDict} from './util.js'
 import {draw_tree} from './draw.js'
 import {init_tree} from './tree.js'
 import {init_characters} from './characters.js'
@@ -127,6 +124,7 @@ function init_game(){
   resize()
   load() // load save data
   update_hud()
+  update_conversion()
   if (game.options.autosave){
     game.autosave_timer = setInterval(save, game.options.autosave_interval)
   }
@@ -165,7 +163,11 @@ function load(){
     save = JSON.parse(save)
     game.state = save.state
     game.resources = save.resources
-    game.unlocks = save.unlocks
+    Object.entries(save.unlocks).forEach(
+      ([feature,unlocked])=>{
+        if(unlocked) game.unlock(feature)
+      }
+    )
     game.options = save.options
 
     deep_merge(save.tree, tree)
@@ -258,9 +260,9 @@ function reset_all(){
   characters = init_characters(game)
   game.characters = characters
   game.resources = {
-    'sp': {'name': '🌰', 'show': true},
-    'figs': {'name': '🍊'},
-    'worms':  {'name': '🐛'}
+    'sp': {'name': '🌰', 'show': true, 'value': 1},
+    'figs': {'name': '🍊', 'value': 2},
+    'worms':  {'name': '🐛', 'value': 1}
   }
   Object.values(game.resources).forEach((res)=>{
     res.amount = 0
@@ -293,9 +295,11 @@ function reset_all(){
   game.dontsave = false
 }
 
-// TODO update UI in resource page for figtosp?
 game.unlock = function(feature){
   game.unlocks[feature] = true
+  if (feature === 'figtosp') {
+    document.getElementById('resource_conversion').classList.remove('hidden')
+  }
 }
 
 /*
@@ -370,6 +374,9 @@ function init_listeners(){
     })
   })
   // button events
+  document.getElementById('btn_convert').addEventListener('click', ()=>{
+    convert_resources(true)
+  })
   document.getElementById('btn_reset').addEventListener('click', ()=>{
     // TODO delete save is for debug purposes only
     update_status('resetting all')
@@ -382,6 +389,11 @@ function init_listeners(){
       update_hud()
     })
   })
+  // text/number inputs
+  document.getElementById('num_convert_a').addEventListener('input', ()=>{
+    update_conversion()
+  })
+
   // get display transform to handle zoom and pan
   game.display_transform = get_display_transform(ctx, canvas, mouse)
   // listen for keyboard events
@@ -395,7 +407,7 @@ function init_listeners(){
     }
     keys_pressed[e.key] = false
   })
-  // listen for mouse events
+  // listen for mouse events on canvas
   canvas.addEventListener('mousemove', mouse_move)
   canvas.addEventListener('mousedown', mouse_move)
   canvas.addEventListener('mouseup', mouse_move)
@@ -410,6 +422,8 @@ function init_listeners(){
 
 // Take action based on which keys are pressed.
 function handle_keyboard_input(){
+  // ignore keypresses when tree is hidden
+  if (document.getElementById('tree').classList.contains('hidden')) return
   // r: respec!
   if (keys_pressed['r']){
     respec()
@@ -571,8 +585,6 @@ function open_tab(tab_id, nav){
     tab.classList.remove('selected')
   })
   nav.classList.add('selected')
-
-
 }
 
 function update_status(category, status, fade=true){
@@ -598,13 +610,20 @@ function get_string(category, status){
 
 function update_hud(){
   let restxt = ''
+  let resource_list = document.getElementById('resource_list')
+  clearelem(resource_list)
   Object.values(game.resources).forEach((r) => {
     if (r.amount > 0) r.show=true
     if (r.show){
-      restxt += r.name+': '+r.amount+' '
+      let str = r.name+': '+r.amount
+      // add to resources page
+      var elem = document.createElement('div')
+      elem.innerHTML = str
+      resource_list.appendChild(elem)
+      restxt += str+' '
     }
   })
-  document.getElementById('resources').textContent = restxt
+  document.getElementById('hud_resources').textContent = restxt
 }
 
 // Display hint text
@@ -678,4 +697,36 @@ function draw_debug_text(ctx, text){
   lines.forEach((line, i) => {
     ctx.fillText(line, x, y+(i*12))
   })
+}
+
+// update conversion ui based on conversion rates and selected currencies
+function update_conversion(){
+  let result = convert_resources()
+  if (result)
+    document.getElementById('num_convert_b').value = result
+  else
+    document.getElementById('num_convert_b').value = ''
+}
+
+function convert_resources(do_conversion=false){
+  let a = document.getElementById('convert_res_a')
+  a = a.options[a.selectedIndex].value
+  let b = document.getElementById('convert_res_b')
+  b = b.options[b.selectedIndex].value
+  let num = document.getElementById('num_convert_a').value
+  if (num<=0) return
+  let val_a = game.resources[a].value
+  let val_b = game.resources[b].value
+  let result = (num * val_a)/val_b
+  if(do_conversion){
+    if (game.resources[a].amount < num){
+      document.getElementById('conversion_error').innerHTML='Insufficient '+game.resources[a].name+' for conversion'
+    }else{
+      document.getElementById('conversion_error').innerHTML=''
+      game.resources[a].amount -= num
+      game.resources[b].amount += result
+      update_hud()
+    }
+  }
+  return result
 }

@@ -103,6 +103,41 @@ canvas {
   background: #c8ff9c;
 }
 
+#resource_conversion{
+  cursor: pointer;
+  margin-top: 1em;
+}
+
+#resource_conversion button:hover{
+  cursor: pointer;
+  background: #e8f5e8;
+}
+
+.btn_standard{
+  font-size: 16px;
+  padding: 8px;
+  margin: 4px;
+  background: #99ab9a;
+}
+.btn_standard:hover{
+  background: #e8f5e8;
+}
+.btn_standard:active{
+  background: #c8ff9c;
+}
+
+input{
+  padding:8px;
+  width: 100px;
+}
+select{
+  height: 32px;
+}
+
+#num_convert_b{
+  background-color: #aaa;
+}
+
 .fadeout {
   visibility: hidden;
   opacity: 0;
