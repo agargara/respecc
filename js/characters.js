@@ -7,14 +7,17 @@ class Character {
     this.current_node = 0
     this.color = color
     this.pos = Array.from(this.tree[node].pos)
-    this.visited_nodes = {
-      node: true
+    this.reachable_nodes = {
+      '0': true
     }
   }
 
   reset(){
     this.current_node = this.start_node
     this.pos = Array.from(this.tree[this.current_node].pos)
+    this.reachable_nodes = {
+      '0': true
+    }
   }
 
   cancel_movement(){
@@ -22,6 +25,15 @@ class Character {
   }
 
   move(target){
+    this.cancel_movement()
+    this._move(target)
+  }
+
+  _move(target){
+    // check that target is valid
+    if(!this.reachable_nodes[target]) return
+    let cn = this.game.current_node()
+    cn.selected = false
     // no animation?
     if (this.game.options.animation_speed <= 0){
       this.pos = this.tree[target].pos
@@ -36,7 +48,7 @@ class Character {
     if (Math.abs(dx) < 0.03 && Math.abs(dy) < 0.03){
       this.pos = Array.from(target_pos)
       this.current_node = target
-      this.visited_nodes[target] = true
+      this.reachable_nodes[target] = true
       this.tree[target].selected = true
       return
     }
@@ -45,7 +57,7 @@ class Character {
     this.game.autopan()
     this.move_timeout = setTimeout(
       () => {
-        this.move(target)
+        this._move(target)
       },
       50/this.game.animation_speed
     )

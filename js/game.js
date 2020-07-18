@@ -1,32 +1,45 @@
 /* TODO
-store xy position in character object and draw based on that
-characters handle their own animation
   HIGH
-  detailed description of current node
+  disable key& mouse listeners when tab is hidden
+  TABS at top to switch between screens
+  - tree
+  - resources
+    - buy/sell
+  - options
+    - save/load
+    - animation speed
+  add more nodes
+  implement worms and figs
 
   MEDIUM
-  character moves along curved path
+  use own icons instead of emojis
+    https://codepen.io/Matnard/pen/mAlEJ
   menu with manual save/load, options
   save slots
   controls help
     show hints at appropriate times
   min zoom based on size of visible tree
   reveal entire areas instead of one node at a time
+  NEW CHARACTER!!!
 
   LOW
+  character pathfinding
+    move along curved paths
   better looking graphics
     pretty background
     UI
     color themes
 
   IDEAS
+  store xy position in character object and draw based on that
+  characters handle their own animation
   make draw.js into class?
   dark magic - bonemancy
     collect bones
     use bones to cast dark magic
 */
 
-import {get, load_image, deep_copy, hit_circle, get_display_transform, DefaultDict} from './util.js'
+import {get, load_image, deep_merge, hit_circle, get_display_transform, DefaultDict} from './util.js'
 import {draw_tree} from './draw.js'
 import {init_tree} from './tree.js'
 import {init_characters} from './characters.js'
@@ -49,6 +62,7 @@ game.options={
   'node_text_margin': 24,
   'autopan': true,
   'autopan_margin': 0.5,
+  'show_node_details': true,
   'theme': {
     'default': '#f00',
     'bgcolor': '#080E07', // rich black
@@ -59,10 +73,14 @@ game.options={
       'activated': '#fff',
       'selected': '#8E9B58',
       'text': '#000',
-      'cost': '#4d7250'
+      'cost': '#4d7250',
+      'detailbg': '#c2b7e8',
+      'detailborder': '#6b57a5',
+      'detailtext': '#000',
     }
   }
 }
+game.dontsave = false
 game.images = {}
 game.hide_hint = {}
 var canvas, ctx            // canvas and drawing context
@@ -149,12 +167,15 @@ function load(){
     game.resources = save.resources
     game.unlocks = save.unlocks
     game.options = save.options
-    deep_copy(save.tree, tree)
-    deep_copy(save.characters, characters)
+
+    deep_merge(save.tree, tree)
+    deep_merge(save.characters, characters)
   }
 }
 
 function save(){
+  if (game.dontsave) return
+  game.dontsave = true
   update_status('save', 'saving', false)
   let save = {
     'state': game.state,
@@ -176,9 +197,13 @@ function save(){
   Object.entries(characters).forEach(([k,chara])=>{
     save.characters[k] = {
       'current_node': chara.current_node,
+      'pos': chara.pos,
+      'reachable_nodes': chara.reachable_nodes,
     }
   })
+
   localStorage.setItem('save',JSON.stringify(save))
+  game.dontsave = false
   setTimeout(()=>{update_status('save', 'saved', true)}, 1000)
 }
 
@@ -187,6 +212,7 @@ function current_character(){
 }
 
 function respec(){
+  game.dontsave = true
   let h = game.hide_hint['respec']
   if (h) h()
   // run pre-respec functions
@@ -222,9 +248,11 @@ function respec(){
   // reset onrespec
   game.onrespec = {'resources': new DefaultDict(0), 'pre':[]}
   update_hud()
+  game.dontsave = false
 }
 
 function reset_all(){
+  game.dontsave = true
   tree = init_tree()
   game.tree = tree
   characters = init_characters(game)
@@ -262,6 +290,12 @@ function reset_all(){
       wasd_hint()
     }
   }, 3000)
+  game.dontsave = false
+}
+
+// TODO update UI in resource page for figtosp?
+game.unlock = function(feature){
+  game.unlocks[feature] = true
 }
 
 /*
@@ -270,7 +304,7 @@ function reset_all(){
 function current_node_id(){
   return current_character()['current_node']
 }
-function current_node(){
+game.current_node = ()=>{
   return tree[current_node_id()]
 }
 // Check if node is activatable
@@ -279,7 +313,9 @@ function can_activate(node){
   return true
 }
 function unlock_neighbors(node){
+  let r = current_character().reachable_nodes
   node.unlocks.forEach((id) => {
+    r[id] = true
     if (game.options.animation_speed <= 0 || !tree[id].hidden){
       tree[id].locked = false
       tree[id].hidden = false
@@ -291,9 +327,8 @@ function unlock_neighbors(node){
 }
 // check if x, y is within node
 function hit_node(x, y, node){
-  let nx = node.pos[0]
-  let ny = node.pos[1]
-  return hit_circle(x, y, nx, ny, game.options.node_size)
+  let pos = game.gridpos_to_realpos(node.pos)
+  return hit_circle(x, y, pos[0], pos[1], game.options.node_size)
 }
 // convert grid position to real position
 game.gridpos_to_realpos = function(gridpos){
@@ -303,12 +338,37 @@ game.gridpos_to_realpos = function(gridpos){
     gridpos[1] * d
   ]
 }
+function purchase_node(node){
+  let h = game.hide_hint['purchasenode']
+  if (h) h()
+  if (node.status == 'deactivated' && can_activate(node)){
+    // update cost
+    game.resources.sp.amount -= node.cost
+    // run activate function
+    if (typeof node.onactivate === 'function') node.onactivate(game)
+    node.status = 'activated'
+    unlock_neighbors(node)
+    update_hud()
+    // show respec hint when out of SP
+    if (game.resources.sp.amount == 0){
+      hint(get_string('hints','respec'), game, 'respec')
+    }
+  }
+}
 
 /*
   [EVENT] event listeners (keyboard, mouse, resize, etc.)
 */
 function init_listeners(){
   window.addEventListener('resize', resize)
+  // navigation buttons
+  Array.from(document.getElementById('navigation').children).forEach((node)=>{
+    if (!node.id || !node.id.startsWith('nav-')) return
+    let tab_id = node.id.replace('nav-', '')
+    node.addEventListener('click', ()=>{
+      open_tab(tab_id, node)
+    })
+  })
   // button events
   document.getElementById('btn_reset').addEventListener('click', ()=>{
     // TODO delete save is for debug purposes only
@@ -358,22 +418,7 @@ function handle_keyboard_input(){
   handle_movement()
   // Spacebar: activate current node
   if (keys_pressed[' ']){
-    let h = game.hide_hint['purchasenode']
-    if (h) h()
-    let n = current_node()
-    if (n.status == 'deactivated' && can_activate(n)){
-      // update cost
-      game.resources.sp.amount -= n.cost
-      // run activate function
-      if (typeof n.onactivate === 'function') n.onactivate(game)
-      n.status = 'activated'
-      unlock_neighbors(n)
-      update_hud()
-      // show respec hint when out of SP
-      if (game.resources.sp.amount == 0){
-        hint(get_string('hints','respec'), game, 'respec')
-      }
-    }
+    purchase_node(game.current_node())
   }
 }
 
@@ -430,13 +475,8 @@ function handle_movement(){
       }
     }
   })
-  if(closest_node_id != null){
-    // stop existing movement
-    c.cancel_movement()
-    let cn = current_node()
-    cn.selected = false
+  if(closest_node_id != null)
     c.move(closest_node_id)
-  }
 }
 
 function mouse_move(event) {
@@ -473,11 +513,25 @@ function mouse_move(event) {
 function click(x, y){
   // detect if any node was clicked
   if (!tree) return
-  Object.values(tree).forEach(node => {
-    if(hit_node(x, y, node)){
-      debug(node)
-    }
+  [x,y] = mouse_to_game_coords(x, y)
+  Object.entries(tree).forEach(([id, node]) => {
+    if (!node) return
+    if(hit_node(x, y, node))
+      current_character().move(id)
   })
+}
+
+function mouse_to_game_coords(x, y){
+  // apply transform (scale/pan)
+  let dt = game.display_transform
+  let mat = dt.matrix
+  // pan
+  x -= mat[4]
+  y -= mat[5]
+  // scale
+  x /= mat[0]
+  y /= mat[3]
+  return [x,y]
 }
 
 /*
@@ -504,6 +558,23 @@ function draw(){
 /*
   [UI] altering the interface and view
 */
+function open_tab(tab_id, nav){
+  let tabs = document.getElementsByClassName('tab')
+  Array.from(tabs).forEach((tab)=>{
+    if (tab.id === tab_id)
+      tab.classList.remove('hidden')
+    else
+      tab.classList.add('hidden')
+  })
+  // update nav menu
+  Array.from(document.getElementById('navigation').children).forEach((tab)=>{
+    tab.classList.remove('selected')
+  })
+  nav.classList.add('selected')
+
+
+}
+
 function update_status(category, status, fade=true){
   let elem = document.getElementById('status')
   let text = category
@@ -552,7 +623,6 @@ async function hint(text, game, hintid, callback){
 }
 
 function debug(thing){
-// todo convert new lines?
   document.getElementById('debug').textContent = JSON.stringify(thing)
 }
 
@@ -560,8 +630,8 @@ function debug(thing){
 function resize(){
   vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0)
   vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0)
-  canvas.width  = vw*0.8
-  canvas.height = vh*0.8
+  canvas.width  = vw*0.8 - 2 // subtract 2 for border
+  canvas.height = vh*0.8 - 2
 }
 
 // pan so that cursor is not too far from center

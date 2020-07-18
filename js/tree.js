@@ -9,9 +9,6 @@ export function init_tree(){
       'text': {
         'en': '+1 🌰'
       },
-      'detail': {
-        'en': 'Gain 1 🌰'
-      },
       'area': 'Ground',
       'unlocks': [
         1,
@@ -31,6 +28,9 @@ export function init_tree(){
       'cost': 1,
       'text': {
         'en': '+2 🌰'
+      },
+      'detail': {
+        'en': 'Every universe is covered by seven layers — earth, water, fire, air, sky, the total energy and false ego — each ten times greater than the previous one. There are innumerable universes besides this one, and although they are unlimitedly large, they move about like atoms in You. Therefore You are called unlimited [ananta].'
       },
       'area': 'trunk',
       'unlocks': [
@@ -149,7 +149,7 @@ export function init_tree(){
         'en': '+5 🌰'
       },
       'area': 'trunk',
-      'unlocks': [15],
+      'unlocks': [15, 17],
       'hidden': true,
       'onactivate': function(game){
         game.resources.sp.amount += 5
@@ -165,7 +165,7 @@ export function init_tree(){
         'en': '+3 🌰 on respec'
       },
       'area': 'roots',
-      'unlocks': [],
+      'unlocks': [16],
       'hidden': true,
       'onactivate': function(game){
         game.onrespec.resources.sp += 3
@@ -197,7 +197,7 @@ export function init_tree(){
       ],
       'cost': 4,
       'text': {
-        'en': '+0.5 🌰 per\nactive node\non respec'
+        'en': '+0.5 🌰 per active node on respec'
       },
       'area': 'roots',
       'unlocks': [],
@@ -253,14 +253,17 @@ export function init_tree(){
       ],
       'cost': 4,
       'text': {
-        'en': 'Unlock\n🍊→🌰\nconversion'
+        'en': '🍊→🌰'
+      },
+      'detail': {
+        'en': 'Unlock the ability to convert 🍊 to 🌰. Starting rate is 1🍊→2🌰.'
       },
       'area': 'figs',
       'shape': 'lump',
       'unlocks': [],
       'hidden': true,
       'onactivate': function(game){
-        game.unlocks.figtosp = true
+        game.unlock('figtosp')
       }
     },
     '14': {
@@ -292,7 +295,7 @@ export function init_tree(){
         'en': '+1 🌰\n(permanent)'
       },
       'detail': {
-        'en': 'Permanently gain +1 🌰.'
+        'en': 'Permanently gain +1 🌰. Can only be purchased once per character.'
       },
       'area': 'trunk',
       'unlocks': [],
@@ -302,6 +305,44 @@ export function init_tree(){
         game.resources.sp.amount += 1
       },
       'permanent': true
-    }
+    },
+    '16': {
+      'pos': [
+        -3,
+        3
+      ],
+      'cost': 8,
+      'text': {
+        'en': '+1 🌰\n(permanent)'
+      },
+      'detail': {
+        'en': 'Permanently gain +1 🌰. Can only be purchased once per character.'
+      },
+      'area': 'underground',
+      'unlocks': [],
+      'hidden': true,
+      'onactivate': function(game){
+        game.resources.sp.permanent += 1
+        game.resources.sp.amount += 1
+      },
+      'permanent': true
+    },
+    '17': {
+      'pos': [
+        -2,
+        -4
+      ],
+      'cost': 8,
+      'text': {
+        'en': '+10 🌰'
+      },
+      'area': 'trunk',
+      'unlocks': [],
+      'hidden': true,
+      'onactivate': function(game){
+        game.resources.sp.amount += 10
+      },
+      'permanent': true
+    },
   }
 }

@@ -59,15 +59,24 @@ export function load_image (url) {
 }
 
 // [optimize] this could create recursion hell...
-export function deep_copy(a, b){
+// copy elements of a into b
+export function deep_merge(a, b){
+  if (!isobj(a) || !isobj(b))
+    return
   Object.entries(a).forEach(([k, v]) => {
-    if (typeof v === 'object' && v !== null){
-      deep_copy(v, b[k])
+    if (isobj(v)){
+      if (isobj(b[k]))
+        deep_merge(v, b[k])
     }else{
       b[k] = v
     }
   })
 }
+
+function isobj(a){
+  return (typeof a === 'object' && a !== null)
+}
+
 export function normalize(pos, scale=1.0) {
   let norm = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1])
   if (norm != 0) {

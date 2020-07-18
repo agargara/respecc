@@ -48,10 +48,17 @@ canvas {
 #ui{
   margin-top: 12px;
 }
-#game_area{
-  max-width: 80vw;
-  max-height: 80vh;
+
+.tab{
+  width: 80vw;
+  height: 80vh;
   border: 1px solid #444;
+  box-sizing: border-box;
+}
+
+.menu{
+  padding: 16px;
+  background: #080E07;
 }
 
 #hud{
@@ -67,6 +74,33 @@ canvas {
 
 #status{
   text-align: right;
+}
+
+#navigation{
+  display: flex;
+  align-items: left;
+  justify-content: left;
+  width: 80vw;
+}
+
+#navigation div{
+  padding: 8px;
+  margin-right: 8px;
+  background: #99ab9a;
+  border: 1px solid #444;
+  border-top: 0;
+  border-bottom-left-radius: 25%;
+  border-bottom-right-radius: 25%;
+  color: #000;
+}
+
+#navigation div:hover{
+  cursor: pointer;
+  background: #e8f5e8;
+}
+
+#navigation div.selected{
+  background: #c8ff9c;
 }
 
 .fadeout {
