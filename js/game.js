@@ -3,6 +3,7 @@
   add more nodes
   implement worms
   more cool looking node shapes
+  make SP per active node an active effect
 
   MEDIUM
   use own icons instead of emojis
@@ -253,7 +254,7 @@ function respec(){
 
 function reset_all(){
   game.dontsave = true
-  tree = init_tree()
+  tree = init_tree(game)
   game.tree = tree
   characters = init_characters(game)
   game.characters = characters
@@ -299,7 +300,7 @@ game.current_node = ()=>{
 }
 // Check if node is activatable
 function can_activate(node){
-  if (game.resources.sp.amount < node.cost) return false
+  if (game.resources.sp.amount < node.get_cost()) return false
   return true
 }
 function unlock_neighbors(node){
@@ -333,7 +334,7 @@ function purchase_node(node){
   if (h) h()
   if (node.status == 'deactivated' && can_activate(node)){
     // update cost
-    game.resources.sp.amount -= node.cost
+    game.resources.sp.amount -= node.get_cost()
     // run activate function
     if (typeof node.onactivate === 'function') node.onactivate(game)
     node.status = 'activated'

@@ -158,25 +158,28 @@ function draw_node_text(ctx, node, game){
   let h = game.options.node_size
   let w = h*GOLD - margin
   if(text)
-    draw_text(ctx, text, x, y, w,game)
+    draw_text(ctx, text, x, y, w, game, 'center', 3)
   // draw cost in bottom left
   if (node.status === 'deactivated'){
+    let cost = node.get_cost()+' 🌰'
     let costx = x-w*0.5+14
     let costy = y+h*0.5+2
     ctx.fillStyle = get_color(game.options.theme, 'nodes', 'cost')
-    draw_round_rect(ctx, costx-18, costy-10, 36, 24, 4, true, false)
-    draw_text(ctx, node.cost+' 🌰', costx, costy, w, game)
+    let costw = ctx.measureText(cost).width
+    let ox = (costw-26)*0.5
+    draw_round_rect(ctx, costx-18, costy-10, costw+8, 24, 4, true, false)
+    draw_text(ctx, cost, costx+ox, costy, costw+8, game, 'center', 1)
   }
 }
 
-function draw_text(ctx, text, x, y, max_width, game, text_align='center'){
+function draw_text(ctx, text, x, y, max_width, game, text_align='center', max_lines=3){
   ctx.fillStyle = get_color(game.options.theme, 'nodes', 'text')
   ctx.textAlign = text_align
   let size = 12
   ctx.font = size + 'px sans-serif'
   let lines =  word_wrap(ctx, text, max_width)
-  // shrink text to fit in 3 lines
-  while (lines.length > 3){
+  // shrink text to fit in max lines
+  while (lines.length > max_lines){
     size -= 0.5
     ctx.font = size + 'px sans-serif'
     lines =  word_wrap(ctx, text, max_width)
@@ -252,7 +255,7 @@ function draw_node_detail(ctx, game){
   let hh = lines.length * 12+padding
   draw_round_rect(ctx, x+w*0.5+margin, y-hh*0.5-padding*0.5, ww+padding, hh+padding, 16, true, true)
   ctx.fillStyle = get_color(game.options.theme, 'nodes', 'detailtext')
-  draw_text(ctx, node.detail[game.options.lang], x+w*0.5+margin+padding*0.5+ww*0.5, y, ww-padding, game)
+  draw_text(ctx, node.detail[game.options.lang], x+w*0.5+margin+padding*0.5+ww*0.5, y, ww-padding, game, 'center', 20)
 }
 
 // get color from theme, return default if not found

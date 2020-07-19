@@ -27,8 +27,15 @@ class Node {
 
   get_cost(){
     let cost = this.cost
-    // TODO apply discounts
-    return cost
+    // apply discounts
+    let discount = 0
+    if (this.game === undefined) return cost
+    if (this.game.unlocks.wormspdiscount && this.pos[1] > 0){
+      discount += this.game.resources.worms.amount*0.5
+    }
+    if (discount > cost*0.5)
+      discount = cost*0.5
+    return cost - discount
   }
 }
 
@@ -118,8 +125,8 @@ export function init_tree(game){
       'text': {
         'en': '+1 🐛'
       },
-      'shape': 'fat',
       'area': 'worms',
+      'shape': 'wiggly',
       'unlocks': [
         12,
         14
@@ -213,6 +220,7 @@ export function init_tree(game){
         'en': '+2 🐛'
       },
       'area': 'worms',
+      'shape': 'wiggly',
       'unlocks': [],
       'onactivate': function(game){
         game.resources.worms.amount += 2
@@ -244,6 +252,7 @@ export function init_tree(game){
         'en': '🌰 cost of underground nodes is reduced by 0.5 per 🐛. (Maximum discount: 50%)'
       },
       'area': 'worms',
+      'shape': 'wiggly',
       'unlocks': [],
       'onactivate': function(game){
         game.unlock('wormspdiscount')
