@@ -8,7 +8,7 @@ body{
   flex-direction: column;
 }
 
-canvas {
+.pixelated{
   image-rendering:optimizeSpeed;             /* Legal fallback */
   image-rendering:-moz-crisp-edges;          /* Firefox        */
   image-rendering:-o-crisp-edges;            /* Opera          */

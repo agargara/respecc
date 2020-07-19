@@ -1,5 +1,6 @@
 const GOLD = 1.618033989
 export function draw_tree(ctx, game){
+  ctx.imageSmoothingEnabled = false
   let tree = game.tree
   if(!tree)
     return
@@ -161,9 +162,9 @@ function draw_node_text(ctx, node, game){
   // draw cost in bottom left
   if (node.status === 'deactivated'){
     let costx = x-w*0.5+14
-    let costy = y+h*0.5+6
+    let costy = y+h*0.5+2
     ctx.fillStyle = get_color(game.options.theme, 'nodes', 'cost')
-    draw_round_rect(ctx, costx-18, costy-14, 36, 24, 4, true, false)
+    draw_round_rect(ctx, costx-18, costy-10, 36, 24, 4, true, false)
     draw_text(ctx, node.cost+' 🌰', costx, costy, w, game)
   }
 }

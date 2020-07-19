@@ -192,7 +192,8 @@ function save(){
     save.tree[k] = {
       'status': node.status,
       'locked': node.locked,
-      'hidden': node.hidden
+      'hidden': node.hidden,
+      'selected': node.selected
     }
   })
   // save relevant info about characters
