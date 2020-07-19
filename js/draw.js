@@ -194,6 +194,7 @@ function draw_text(ctx, text, x, y, max_width, game, text_align='center'){
 }
 
 function draw_characters(ctx, game){
+  if (!game.images.characters) return
   // Draw each character
   let offset = game.options.node_size-16
   Object.values(game.characters).forEach(chara => {

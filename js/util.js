@@ -59,6 +59,7 @@ export function load_image (url) {
       resolve(img)
     }
     img.onerror = function () {
+      console.log('error loading image: '+url)
       reject()
     }
   })
