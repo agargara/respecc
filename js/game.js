@@ -2,6 +2,7 @@
   HIGH
   add more nodes
   implement worms
+  more cool looking node shapes
 
   MEDIUM
   use own icons instead of emojis
@@ -40,6 +41,7 @@ import {clearelem, get, load_image, deep_merge, hit_circle, get_display_transfor
 import {draw_tree} from './draw.js'
 import {init_tree} from './tree.js'
 import {init_characters} from './characters.js'
+import {init_resources} from './resources.js'
 import {strings} from './strings.js'
 
 const GOLD = 1.618033989
@@ -231,12 +233,7 @@ function respec(){
   // reset activated nodes
   Object.values(tree).forEach(node => {
     if (!(node.permanent && node.status === 'activated'))
-      node.status = 'deactivated'
-    node.locked = true
-    node.selected = false
-    // cancel animations
-    node.link_t = undefined
-    node.outline_t = undefined
+      node.respec()
   })
   tree['0'].locked = false
   tree['0'].selected = true
@@ -260,24 +257,12 @@ function reset_all(){
   game.tree = tree
   characters = init_characters(game)
   game.characters = characters
-  game.resources = {
-    'sp': {'name': '🌰', 'show': true, 'value': 1},
-    'figs': {'name': '🍊', 'value': 2},
-    'worms':  {'name': '🐛', 'value': 1}
-  }
-  Object.values(game.resources).forEach((res)=>{
-    res.amount = 0
-    res.permanent = 0
-  })
+  game.resources = init_resources()
   game.unlocks = {}
   game.state = {
     'current_character': 'arborist'
   }
   game.onrespec = {'resources': new DefaultDict(0), 'pre':[]}
-  Object.values(tree).forEach(node => {
-    node.status = 'deactivated'
-    node.locked = true
-  })
   tree['0'].locked = false
   // display purchase node hint after 5 seconds
   window.setTimeout(() => {
