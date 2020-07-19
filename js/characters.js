@@ -25,6 +25,8 @@ class Character {
   }
 
   move(target){
+    let h = this.game.hide_hint['move']
+    if (h) h()
     this.cancel_movement()
     this._move(target)
   }

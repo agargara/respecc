@@ -9,10 +9,10 @@ export var strings={
   },
   'hints':{
     'purchasenode':{
-      'en': 'press [spacebar] to purchase node'
+      'en': '[spacebar] or click to purchase node'
     },
-    'wasd':{
-      'en': 'wasd or arrow keys to move'
+    'move':{
+      'en': 'wasd, arrow keys, or click to move'
     },
     'respec':{
       'en': 'press [r] to respec'

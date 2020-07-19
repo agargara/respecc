@@ -281,16 +281,16 @@ function reset_all(){
   tree['0'].locked = false
   // display purchase node hint after 5 seconds
   window.setTimeout(() => {
-    let wasd_hint = function(){
+    let move_hint = function(){
       if (current_node_id() == 0 && tree['1'].status != 'activated' && tree['2'].status != 'activated'){
-        // display wasd hint if player hasn't moved
-        hint(get_string('hints','wasd'), game, 'wasd')
+        // display movement hint if player hasn't moved
+        hint(get_string('hints','move'), game, 'move')
       }
     }
     if (current_node_id() == 0 && tree['0'].status != 'activated'){
-      hint(get_string('hints','purchasenode'), game, 'purchasenode', wasd_hint, 2000)
+      hint(get_string('hints','purchasenode'), game, 'purchasenode', move_hint, 2000)
     }else{
-      wasd_hint()
+      move_hint()
     }
   }, 3000)
   game.dontsave = false
@@ -458,8 +458,6 @@ function handle_movement(){
     keys_pressed.d = keys_pressed.ArrowRight = false
   }
   if (dy == 0 && dx == 0) return
-  let h = game.hide_hint['wasd']
-  if (h) h()
   let angle = Math.atan2(dy, dx)
 
   // find closest unlocked node to current character in direction
@@ -531,8 +529,14 @@ function click(x, y){
   [x,y] = mouse_to_game_coords(x, y)
   Object.entries(tree).forEach(([id, node]) => {
     if (!node) return
-    if(hit_node(x, y, node))
-      current_character().move(id)
+    if(hit_node(x, y, node)){
+      // if current node, purchase it,
+      // otherwise move to it
+      if(node === game.current_node())
+        purchase_node(node)
+      else
+        current_character().move(id)
+    }
   })
 }
 
