@@ -52,6 +52,7 @@ const GOLD = 1.618033989
 var tree
 var characters
 var game = {}
+window.game = game // allow console access for easy debugging TODO delete this?
 game.options={
   'autosave': true,
   'autosave_interval': 5000,
@@ -400,7 +401,7 @@ function handle_keyboard_input(){
   handle_movement()
   // Spacebar: activate current node
   if (keys_pressed[' ']){
-    purchase_node(game.current_node())
+    current_character().purchase()
   }
 }
 
@@ -511,7 +512,7 @@ function click(x, y){
       // if current node, purchase it,
       // otherwise move to it
       if(node === game.current_node())
-        current_character().purchase(id)
+        current_character().purchase()
       else
         current_character().move(id)
     }
@@ -634,8 +635,8 @@ async function hint(hintid, callback){
       callback()
   })
 }
-
-function debug(thing){
+game.hint = hint
+game.debug = function(thing){
   document.getElementById('debug').textContent = JSON.stringify(thing)
 }
 

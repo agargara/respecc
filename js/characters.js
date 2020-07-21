@@ -27,15 +27,17 @@ class Character {
       '0': true
     }
     // reset resources
-    this.resources.forEach((res) => {
+    Object.values(this.resources).forEach((res) => {
       res.amount = res.permanent
     })
     // gain respec resources
-    this.onrespec.resources.forEach(([k, res]) => {
+    Object.entries(this.onrespec.resources).forEach(([k, res]) => {
       this.resources[k].amount += res
     })
     // reset onrespec
     this.onrespec = {'resources': new DefaultDict(0), 'pre':[]}
+    // reset activated nodes
+    this.activated_nodes = new Map()
   }
 
   cancel_movement(){
@@ -83,25 +85,28 @@ class Character {
     )
   }
 
-  // try to purchase target node
-  purchase(target){
-    let node = this.tree[target]
-    if (!this.can_activate(node))
+  // try to purchase current node
+  purchase(){
+    let node = this.tree[this.current_node]
+    if (!this.can_activate(node, this.current_node))
       return
     // update cost
     this.resources.sp.amount -= node.get_cost()
     // add to list of activated nodes
-    this.activated_nodes.set(target, node)
-    // show respec hint when out of SP
-    if (this.resources.sp.amount == 0){
-      this.game.hint('respec')
-    }
+    this.activated_nodes.set(this.current_node, node)
     // purchase node
     this.game.purchase_node(node)
+    // show respec hint when out of SP
+    if (this.resources.sp.amount == 0){
+      console.log(this.resources.sp.amount )
+      this.game.hint('respec')
+    }
   }
 
-  can_activate(node){
-    return (node.status === 'deactivated' && this.resources.sp.amount < node.get_cost())
+  can_activate(node, nodeid){
+    return (
+      this.activated_nodes.get(nodeid) === undefined &&
+      this.resources.sp.amount >= node.get_cost())
   }
 }
 export function init_characters(game) {
