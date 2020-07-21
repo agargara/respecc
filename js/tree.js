@@ -31,7 +31,7 @@ class Node {
     let discount = 0
     if (this.game === undefined) return cost
     if (this.game.unlocks.wormspdiscount && this.pos[1] > 0){
-      discount += this.game.resources.worms.amount*0.5
+      discount += this.game.current_character().resources.worms.amount*0.5
     }
     if (discount > cost*0.5)
       discount = cost*0.5
@@ -51,7 +51,7 @@ export function init_tree(game){
       'unlocks': [ 1, 2 ],
       'hidden': false,
       'onactivate': function(game){
-        game.resources.sp.amount += 1
+        game.current_character().resources.sp.amount += 1
       },
       'selected': true
     }),
@@ -64,7 +64,7 @@ export function init_tree(game){
       'area': 'trunk',
       'unlocks': [ 3, 5 ],
       'onactivate': function(game){
-        game.resources.sp.amount += 2
+        game.current_character().resources.sp.amount += 2
       }
     }),
     '2': new Node(game, {
@@ -76,7 +76,7 @@ export function init_tree(game){
       'area': 'trunk',
       'unlocks': [ 4, 6 ],
       'onactivate': function(game){
-        game.onrespec.resources.sp += 1
+        game.current_character().onrespec.resources.sp += 1
       }
     }),
     '3': new Node(game, {
@@ -88,7 +88,7 @@ export function init_tree(game){
       'area': 'trunk',
       'unlocks': [ 7, 9 ],
       'onactivate': function(game){
-        game.resources.sp.amount += 3
+        game.current_character().resources.sp.amount += 3
       }
     }),
     '4': new Node(game, {
@@ -100,7 +100,7 @@ export function init_tree(game){
       'area': 'trunk',
       'unlocks': [ 8, 10 ],
       'onactivate': function(game){
-        game.onrespec.resources.sp += 2
+        game.current_character().onrespec.resources.sp += 2
       }
     }),
     '5': new Node(game, {
@@ -116,7 +116,7 @@ export function init_tree(game){
         13
       ],
       'onactivate': function(game){
-        game.resources.figs.amount += 1
+        game.current_character().resources.figs.amount += 1
       }
     }),
     '6': new Node(game, {
@@ -132,7 +132,7 @@ export function init_tree(game){
         14
       ],
       'onactivate': function(game){
-        game.resources.worms.amount += 1
+        game.current_character().resources.worms.amount += 1
       }
     }),
     '7': new Node(game, {
@@ -144,7 +144,7 @@ export function init_tree(game){
       'area': 'trunk',
       'unlocks': [15, 17],
       'onactivate': function(game){
-        game.resources.sp.amount += 5
+        game.current_character().resources.sp.amount += 5
       }
     }),
     '8': new Node(game, {
@@ -156,7 +156,7 @@ export function init_tree(game){
       'area': 'roots',
       'unlocks': [16],
       'onactivate': function(game){
-        game.onrespec.resources.sp += 3
+        game.current_character().onrespec.resources.sp += 3
       }
     }),
     '9': new Node(game, {
@@ -174,7 +174,7 @@ export function init_tree(game){
             amount += 0.5
         })
         if (amount > 8) amount = 8
-        game.resources.sp.amount += amount
+        game.current_character().resources.sp.amount += amount
       }
     }),
     '10': new Node(game, {
@@ -195,7 +195,7 @@ export function init_tree(game){
                 amount += 0.5
             })
             if (amount > 8) amount = 8
-            game.onrespec.resources.sp += amount
+            game.current_character().onrespec.resources.sp += amount
           }
         )
       }
@@ -210,7 +210,7 @@ export function init_tree(game){
       'shape': 'lump',
       'unlocks': [],
       'onactivate': function(game){
-        game.resources.figs.amount += 2
+        game.current_character().resources.figs.amount += 2
       }
     }),
     '12': new Node(game, {
@@ -223,7 +223,7 @@ export function init_tree(game){
       'shape': 'wiggly',
       'unlocks': [],
       'onactivate': function(game){
-        game.resources.worms.amount += 2
+        game.current_character().resources.worms.amount += 2
       }
     }),
     '13': new Node(game, {
@@ -270,8 +270,8 @@ export function init_tree(game){
       'area': 'trunk',
       'unlocks': [],
       'onactivate': function(game){
-        game.resources.sp.permanent += 1
-        game.resources.sp.amount += 1
+        game.current_character().resources.sp.permanent += 1
+        game.current_character().resources.sp.amount += 1
       },
       'permanent': true
     }),
@@ -287,8 +287,8 @@ export function init_tree(game){
       'area': 'underground',
       'unlocks': [],
       'onactivate': function(game){
-        game.resources.sp.permanent += 1
-        game.resources.sp.amount += 1
+        game.current_character().resources.sp.permanent += 1
+        game.current_character().resources.sp.amount += 1
       },
       'permanent': true
     }),
@@ -301,7 +301,7 @@ export function init_tree(game){
       'area': 'trunk',
       'unlocks': [],
       'onactivate': function(game){
-        game.resources.sp.amount += 10
+        game.current_character().resources.sp.amount += 10
       },
     }),
   }

@@ -1,4 +1,4 @@
-export var strings={
+var strings={
   'save':{
     'saving':{
       'en': 'Saving...'
@@ -18,4 +18,11 @@ export var strings={
       'en': 'press [r] to respec'
     },
   }
+}
+
+export function get_string(category, status, lang){
+  if (strings[category] && strings[category][status])
+    return strings[category][status][lang]
+  else
+    return 'love'
 }

@@ -1,6 +1,5 @@
 /* TODO
   HIGH
-  display current character at top
   refactor code:
     - store ordered purchased node list in Character
       - this will allow save/load of builds, as well as separate builds per character
@@ -8,6 +7,7 @@
   test if performance suffers with 1000 nodes
 
   MEDIUM
+  level up mechanic
   add more nodes
   more cool looking node shapes
   use own icons instead of emojis
@@ -42,12 +42,11 @@
     },
 */
 
-import {clearelem, get, load_image, deep_merge, deep_copy, hit_circle, get_display_transform, DefaultDict} from './util.js'
+import {clearelem, get, load_image, deep_merge, deep_copy, hit_circle, get_display_transform} from './util.js'
 import {draw_tree} from './draw.js'
 import {init_tree} from './tree.js'
 import {init_characters} from './characters.js'
-import {init_resources} from './resources.js'
-import {strings} from './strings.js'
+import {get_string} from './strings.js'
 
 const GOLD = 1.618033989
 var tree
@@ -88,6 +87,7 @@ game.options={
 game.dontsave = false
 game.images = {}
 game.hide_hint = {}
+game.onrespec = {'pre':[]}
 var canvas, ctx            // canvas and drawing context
 var vw, vh                 // viewport height/width
 var keys_pressed = {}
@@ -170,7 +170,6 @@ function load(){
   if (save){
     save = JSON.parse(save)
     game.state = save.state
-    game.resources = save.resources
     Object.entries(save.unlocks).forEach(
       ([feature,unlocked])=>{
         if(unlocked) game.unlock(feature)
@@ -189,7 +188,6 @@ function save(){
   update_status('save', 'saving', false)
   let save = {
     'state': game.state,
-    'resources': game.resources,
     'unlocks': game.unlocks,
     'options': game.options,
     'tree': {'nodes': {}},
@@ -221,6 +219,7 @@ function save(){
 function current_character(){
   return characters[game.state.current_character]
 }
+game.current_character = current_character
 
 function respec(){
   game.dontsave = true
@@ -243,16 +242,6 @@ function respec(){
   })
   tree['0'].locked = false
   tree['0'].selected = true
-  // reset resources
-  Object.values(game.resources).forEach((res) => {
-    res.amount = res.permanent
-  })
-  // gain respec resources
-  Object.entries(game.onrespec.resources).forEach(([k, res]) => {
-    game.resources[k].amount += res
-  })
-  // reset onrespec
-  game.onrespec = {'resources': new DefaultDict(0), 'pre':[]}
   update_hud()
   game.dontsave = false
 }
@@ -263,23 +252,21 @@ function reset_all(){
   game.tree = tree
   characters = init_characters(game)
   game.characters = characters
-  game.resources = init_resources()
   game.unlocks = {}
   game.state = {
     'current_character': 'arborist'
   }
-  game.onrespec = {'resources': new DefaultDict(0), 'pre':[]}
   tree['0'].locked = false
   // display purchase node hint after 5 seconds
   window.setTimeout(() => {
     let move_hint = function(){
       if (current_node_id() == 0 && tree['1'].status != 'activated' && tree['2'].status != 'activated'){
         // display movement hint if player hasn't moved
-        hint(get_string('hints','move'), game, 'move')
+        hint('move')
       }
     }
     if (current_node_id() == 0 && tree['0'].status != 'activated'){
-      hint(get_string('hints','purchasenode'), game, 'purchasenode', move_hint, 2000)
+      hint('purchasenode', move_hint)
     }else{
       move_hint()
     }
@@ -303,11 +290,7 @@ function current_node_id(){
 game.current_node = ()=>{
   return tree[current_node_id()]
 }
-// Check if node is activatable
-function can_activate(node){
-  if (game.resources.sp.amount < node.get_cost()) return false
-  return true
-}
+
 function unlock_neighbors(node){
   let r = current_character().reachable_nodes
   node.unlocks.forEach((id) => {
@@ -334,22 +317,15 @@ game.gridpos_to_realpos = function(gridpos){
     gridpos[1] * d
   ]
 }
-function purchase_node(node){
+game.purchase_node = function(node){
+  // hide purchase node hint
   let h = game.hide_hint['purchasenode']
   if (h) h()
-  if (node.status == 'deactivated' && can_activate(node)){
-    // update cost
-    game.resources.sp.amount -= node.get_cost()
-    // run activate function
-    if (typeof node.onactivate === 'function') node.onactivate(game)
-    node.status = 'activated'
-    unlock_neighbors(node)
-    update_hud()
-    // show respec hint when out of SP
-    if (game.resources.sp.amount == 0){
-      hint(get_string('hints','respec'), game, 'respec')
-    }
-  }
+  // run activate function
+  if (typeof node.onactivate === 'function') node.onactivate(game)
+  node.status = 'activated'
+  unlock_neighbors(node)
+  update_hud()
 }
 
 /*
@@ -376,7 +352,7 @@ function init_listeners(){
     reset_all
   })
   document.getElementById('btn_cheat').addEventListener('click', ()=>{
-    Object.values(game.resources).forEach((res)=>{
+    Object.values(current_character().resources).forEach((res)=>{
       res.amount += 100
       update_hud()
     })
@@ -535,7 +511,7 @@ function click(x, y){
       // if current node, purchase it,
       // otherwise move to it
       if(node === game.current_node())
-        purchase_node(node)
+        current_character().purchase(id)
       else
         current_character().move(id)
     }
@@ -579,6 +555,10 @@ function draw(){
 /*
   [UI] altering the interface and view
 */
+function str( category, status){
+  return get_string(category, status, game.options.lang)
+}
+
 function open_tab(tab_id, nav){
   let tabs = document.getElementsByClassName('tab')
   Array.from(tabs).forEach((tab)=>{
@@ -598,7 +578,7 @@ function update_status(category, status, fade=true){
   let elem = document.getElementById('status')
   let text = category
   if (status)
-    text = get_string(category,status)
+    text = str(category,status)
   elem.textContent = text
   elem.classList.remove('fadeout')
   if(fade){
@@ -608,12 +588,7 @@ function update_status(category, status, fade=true){
   }
 }
 
-function get_string(category, status){
-  if (strings[category] && strings[category][status])
-    return strings[category][status][game.options.lang]
-  else
-    return 'love'
-}
+
 
 function update_hud(){
   // clear hud and resource list
@@ -628,7 +603,7 @@ function update_hud(){
 
   // resource list
   let reshtml = ''
-  Object.values(game.resources).forEach((r) => {
+  Object.values(current_character().resources).forEach((r) => {
     if (r.amount > 0) r.show=true
     if (r.show){
       let str = r.name+': '+r.amount
@@ -645,7 +620,8 @@ function update_hud(){
 }
 
 // Display hint text
-async function hint(text, game, hintid, callback){
+async function hint(hintid, callback){
+  let text = str('hints','respec')
   var container = document.getElementById('hints')
   var elem = document.createElement('div')
   elem.innerHTML = text
@@ -726,6 +702,7 @@ function update_conversion(){
     document.getElementById('num_convert_b').value = ''
 }
 
+// TODO move this into Character?
 function convert_resources(do_conversion=false){
   let a = document.getElementById('convert_res_a')
   a = a.options[a.selectedIndex].value
@@ -733,16 +710,17 @@ function convert_resources(do_conversion=false){
   b = b.options[b.selectedIndex].value
   let num = document.getElementById('num_convert_a').value
   if (num<=0) return
-  let val_a = game.resources[a].value
-  let val_b = game.resources[b].value
+  let res = current_character().resources
+  let val_a = res[a].value
+  let val_b = res[b].value
   let result = (num * val_a)/val_b
   if(do_conversion){
-    if (game.resources[a].amount < num){
-      document.getElementById('conversion_error').innerHTML='Insufficient '+game.resources[a].name+' for conversion'
+    if (res[a].amount < num){
+      document.getElementById('conversion_error').innerHTML='Insufficient '+res[a].name+' for conversion'
     }else{
       document.getElementById('conversion_error').innerHTML=''
-      game.resources[a].amount -= num
-      game.resources[b].amount += result
+      res[a].amount -= num
+      res[b].amount += result
       update_hud()
     }
   }
