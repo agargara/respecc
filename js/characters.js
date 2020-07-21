@@ -1,5 +1,5 @@
 class Character {
-  constructor(game, classy, node, color) {
+  constructor(game, classy, node, color, imgurl) {
     this.game = game
     this.tree = game.tree
     this.classy = classy
@@ -10,6 +10,8 @@ class Character {
     this.reachable_nodes = {
       '0': true
     }
+    this.level = 1
+    this.img = '../img/portraits/'+this.classy+'.png'
   }
 
   reset(){
@@ -69,9 +71,9 @@ export function init_characters(game) {
   return {
     'arborist': new Character(
       game,
-      'arborist',
+      'Arborist',
       0,
-      '#8E9B58' // moss green
+      '#8E9B58', // moss green
     )
   }
 }

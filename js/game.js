@@ -1,6 +1,5 @@
 /* TODO
   HIGH
-  vertical center everything
   display current character at top
   refactor code:
     - store ordered purchased node list in Character
@@ -605,21 +604,32 @@ function get_string(category, status){
 }
 
 function update_hud(){
-  let restxt = ''
+  // clear hud and resource list
+  let hud = document.getElementById('hud_left')
+  clearelem(hud)
   let resource_list = document.getElementById('resource_list')
   clearelem(resource_list)
+
+  // current character info
+  let c = current_character()
+  let charhtml = '<img class="portrait" src="'+c.img+'"> Level '+c.level+' '+c.classy
+
+  // resource list
+  let reshtml = ''
   Object.values(game.resources).forEach((r) => {
     if (r.amount > 0) r.show=true
     if (r.show){
       let str = r.name+': '+r.amount
       // add to resources page
-      var elem = document.createElement('div')
+      let elem = document.createElement('div')
       elem.innerHTML = str
       resource_list.appendChild(elem)
-      restxt += str+' '
+      reshtml += str+' '
     }
   })
-  document.getElementById('hud_resources').textContent = restxt
+  let hudspan = document.createElement('span')
+  hudspan.innerHTML = charhtml+'　　　'+reshtml
+  hud.appendChild(hudspan)
 }
 
 // Display hint text
