@@ -26,7 +26,6 @@ img.portrait{
   outline: 1px solid #F1E7C3;
   width: 32px;
   height: 32px;
-  image-rendering: pixelated;
   padding: 0;
   top: 10px;
   left: 1px;

@@ -7,6 +7,7 @@ export class DefaultDict {
 }
 
 export function clearelem(elem){
+  if (!elem) return
   while(elem.firstChild){
     elem.removeChild(elem.firstChild)
   }
@@ -78,6 +79,18 @@ export function deep_merge(a, b){
       b[k] = v
     }
   })
+}
+
+// [optimize] this could create recursion hell...
+// return a copy of a
+export function deep_copy(a){
+  if (!isobj(a))
+    return a
+  let ret = {}
+  Object.entries(a).forEach(([k, v]) => {
+    ret[k] = deep_copy(v)
+  })
+  return ret
 }
 
 function isobj(a){

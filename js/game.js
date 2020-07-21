@@ -42,7 +42,7 @@
     },
 */
 
-import {clearelem, get, load_image, deep_merge, hit_circle, get_display_transform, DefaultDict} from './util.js'
+import {clearelem, get, load_image, deep_merge, deep_copy, hit_circle, get_display_transform, DefaultDict} from './util.js'
 import {draw_tree} from './draw.js'
 import {init_tree} from './tree.js'
 import {init_characters} from './characters.js'
@@ -56,6 +56,7 @@ var game = {}
 game.options={
   'autosave': true,
   'autosave_interval': 5000,
+  'click_margin': 16,
   'zoom_min': 0.5,
   'zoom_max': 1.25,
   'animation_speed': 1.0, // higher numbers are faster, 0 for off
@@ -497,9 +498,12 @@ function mouse_move(event) {
   if (event.type === 'mousedown') {
     event.preventDefault()
     mouse.btn |= mouse.btnmask[event.which-1]
+    game.mousedownpos =  deep_copy(mouse.pos)
   } else if (event.type === 'mouseup') {
     mouse.btn &= mouse.btnmask[event.which+2]
-    click(x, y)
+    // only click if mouseup coordinates are close to mousedown coordinates
+    if (click_is_close(mouse.pos))
+      click(x, y)
   } else if (event.type === 'mouseout') {
     mouse.btn = 0
     mouse.over = false
@@ -513,6 +517,14 @@ function mouse_move(event) {
   }
 }
 
+function click_is_close(pos){
+  let dx = pos.x - game.mousedownpos.x
+  let dy = pos.y - game.mousedownpos.y
+  if (Math.abs(dx) < game.options.click_margin && Math.abs(dy) < game.options.click_margin)
+    return true
+  else
+    return false
+}
 function click(x, y){
   // detect if any node was clicked
   if (!tree) return
@@ -612,7 +624,7 @@ function update_hud(){
 
   // current character info
   let c = current_character()
-  let charhtml = '<img class="portrait" src="'+c.img+'"> Level '+c.level+' '+c.classy
+  let charhtml = '<img class="portrait pixelated" src="'+c.img+'"> Level '+c.level+' '+c.classy
 
   // resource list
   let reshtml = ''
