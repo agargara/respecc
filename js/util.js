@@ -126,8 +126,10 @@ export function hit_circle(x1, y1, x2, y2, r){
     return false
 }
 
-export function get_display_transform(ctx, canvas, mouse){
+export function get_display_transform(ctx, canvas, mouse, options){
   return {
+    zoom_min: options.zoom_min,
+    zoom_max: options.zoom_max,
     x:-canvas.width/2,
     y:-canvas.height/2,
     ox:0,
@@ -236,6 +238,8 @@ export function get_display_transform(ctx, canvas, mouse){
             if(mouse.pos.z < 0){
               mouse.pos.z = 0
             }
+            if (this.scale > this.zoom_max)
+              this.scale = this.zoom_max
           }
           if(mouse.pos.z < 0){ // zoom out
             this.scale *= 1/1.1
@@ -243,6 +247,8 @@ export function get_display_transform(ctx, canvas, mouse){
             if(mouse.pos.z > 0){
               mouse.pos.z = 0
             }
+            if (this.scale < this.zoom_min)
+              this.scale = this.zoom_min
           }
         }
         // get the real mouse position

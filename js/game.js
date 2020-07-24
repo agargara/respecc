@@ -1,12 +1,31 @@
 /* TODO
   HIGH
-  refactor code:
-    - store ordered purchased node list in Character
-      - this will allow save/load of builds, as well as separate builds per character
-    - when drawing nodes check current character to decide which nodes are active
-  test if performance suffers with 1000 nodes
+  test if performance suffers with 100 nodes
+  spoilers: it does
+
+  optimization:
+
+  render entire tree ONCE to an offscreen canvas
+  only re-render parts of the tree as needed
+
+
+  https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas
+    nodes draw themselves
+    init node: draw the node once, subsequent draws simply blit
+
+    off screen canvas:
+    myCanvas.offscreenCanvas = document.createElement('canvas');
+myCanvas.offscreenCanvas.width = myCanvas.width;
+myCanvas.offscreenCanvas.height = myCanvas.height;
+
+myCanvas.getContext('2d').drawImage(myCanvas.offScreenCanvas, 0, 0);
+especially text rendering should only happen once
+redraw only when color changes
+in fact we should only need to draw nodes once?
 
   MEDIUM
+  switching characters
+    - set node statuses based on character
   level up mechanic
   add more nodes
   more cool looking node shapes
@@ -43,27 +62,26 @@
 */
 
 import {clearelem, get, load_image, deep_merge, deep_copy, hit_circle, get_display_transform} from './util.js'
-import {draw_tree} from './draw.js'
-import {init_tree} from './tree.js'
+import Draw from './draw.js'
+import Tree from './tree.js'
 import {init_characters} from './characters.js'
 import {get_string} from './strings.js'
 
-const GOLD = 1.618033989
-var tree
+var nodes
 var characters
 var game = {}
 window.game = game // allow console access for easy debugging TODO delete this?
 game.options={
   'autosave': true,
-  'autosave_interval': 5000,
+  'autosave_interval': 60000,
   'click_margin': 16,
-  'zoom_min': 0.5,
-  'zoom_max': 1.25,
+  'zoom_min': 0.5, // TODO change min zoom based on amount of tree revealed
+  'zoom_max': 2,
   'animation_speed': 1.0, // higher numbers are faster, 0 for off
   'max_travel_dist': 2,
   'lang': 'en',
-  'node_size': 64,
-  'node_distance': 90,
+  'node_size': [104,64],
+  'node_distance': [146,90],
   'node_text_margin': 24,
   'autopan': true,
   'autopan_margin': 0.5,
@@ -109,9 +127,9 @@ window.onload = function(){
 function load_assets(){
   document.getElementById('loading_overlay').classList.remove('hidden')
   const promises = [
-    get('./resources/nodes.svg', 'svg'),
-    load_image('./img/characters.png'),
-    load_image('./img/sp.png'),
+    get('resources/nodes.svg', 'svg'),
+    load_image('img/characters.png'),
+    load_image('img/sp.png'),
   ]
   Promise.allSettled(promises).
     then((results) => {
@@ -130,6 +148,8 @@ function init_game(){
   reset_all()
   canvas = document.getElementById('game_screen')
   ctx = canvas.getContext('2d')
+  game.canvas = canvas
+  game.ctx = ctx
   resize()
   load() // load save data
   update_hud()
@@ -139,7 +159,7 @@ function init_game(){
   }
   init_listeners()
   document.getElementById('loading_overlay').classList.add('hidden')
-  requestAnimationFrame(draw)
+  game.draw = new Draw(game)
 }
 
 // convert svg paths to point arrays
@@ -178,7 +198,7 @@ function load(){
     )
     game.options = save.options
 
-    deep_merge(save.tree, tree)
+    deep_merge(save.nodes, game.nodes)
     deep_merge(save.characters, characters)
   }
 }
@@ -191,13 +211,12 @@ function save(){
     'state': game.state,
     'unlocks': game.unlocks,
     'options': game.options,
-    'tree': {'nodes': {}},
+    'nodes': {},
     'characters': {}
   }
   // save tree node status
-  Object.entries(tree).forEach(([k,node])=>{
-    save.tree[k] = {
-      'status': node.status,
+  Object.entries(nodes).forEach(([k,node])=>{
+    save.nodes[k] = {
       'locked': node.locked,
       'hidden': node.hidden,
       'selected': node.selected
@@ -236,37 +255,33 @@ function respec(){
   Object.values(characters).forEach((char) => {
     char.reset()
   })
-  // reset activated nodes
-  Object.values(tree).forEach(node => {
-    if (!(node.permanent && node.status === 'activated'))
-      node.respec()
-  })
-  tree['0'].locked = false
-  tree['0'].selected = true
+  nodes['0'].locked = false
+  nodes['0'].selected = true
   update_hud()
   game.dontsave = false
 }
 
 function reset_all(){
   game.dontsave = true
-  tree = init_tree(game)
-  game.tree = tree
+  game.unlocks = {}
+  game.tree = new Tree(game)
+  nodes = game.tree.nodes
+  game.nodes = nodes
   characters = init_characters(game)
   game.characters = characters
-  game.unlocks = {}
   game.state = {
     'current_character': 'arborist'
   }
-  tree['0'].locked = false
+  nodes['0'].locked = false
   // display purchase node hint after 5 seconds
   window.setTimeout(() => {
     let move_hint = function(){
-      if (current_node_id() == 0 && tree['1'].status != 'activated' && tree['2'].status != 'activated'){
+      if (current_character().activated_nodes.size == 1 && current_node_id() == 0){
         // display movement hint if player hasn't moved
         hint('move')
       }
     }
-    if (current_node_id() == 0 && tree['0'].status != 'activated'){
+    if (current_character().activated_nodes.size < 1){
       hint('purchasenode', move_hint)
     }else{
       move_hint()
@@ -282,6 +297,7 @@ game.unlock = function(feature){
   }
 }
 
+
 /*
   [NODE] node manipulation
 */
@@ -289,33 +305,34 @@ function current_node_id(){
   return current_character()['current_node']
 }
 game.current_node = ()=>{
-  return tree[current_node_id()]
+  return nodes[current_node_id()]
 }
 
 function unlock_neighbors(node){
   let r = current_character().reachable_nodes
   node.unlocks.forEach((id) => {
+    if (!nodes.hasOwnProperty(id)) return
     r[id] = true
-    if (game.options.animation_speed <= 0 || !tree[id].hidden){
-      tree[id].locked = false
-      tree[id].hidden = false
+    if (game.options.animation_speed <= 0 || !nodes[id].hidden){
+      nodes[id].locked = false
+      nodes[id].hidden = false
     }else{
-      tree[id].link_t = 0
-      tree[id].outline_t = 0
+      nodes[id].link_t = 0
+      nodes[id].outline_t = 0
     }
   })
 }
 // check if x, y is within node
 function hit_node(x, y, node){
   let pos = game.gridpos_to_realpos(node.pos)
-  return hit_circle(x, y, pos[0], pos[1], game.options.node_size)
+  return hit_circle(x, y, pos[0], pos[1], game.options.node_size[0])
 }
 // convert grid position to real position
 game.gridpos_to_realpos = function(gridpos){
   let d = game.options.node_distance
   return [
-    gridpos[0] * d * GOLD,
-    gridpos[1] * d
+    gridpos[0] * d[0],
+    gridpos[1] * d[1]
   ]
 }
 game.purchase_node = function(node){
@@ -324,7 +341,6 @@ game.purchase_node = function(node){
   if (h) h()
   // run activate function
   if (typeof node.onactivate === 'function') node.onactivate(game)
-  node.status = 'activated'
   unlock_neighbors(node)
   update_hud()
 }
@@ -364,7 +380,11 @@ function init_listeners(){
   })
 
   // get display transform to handle zoom and pan
-  game.display_transform = get_display_transform(ctx, canvas, mouse)
+  let opt = {
+    'zoom_min': game.options.zoom_min,
+    'zoom_max': game.options.zoom_max,
+  }
+  game.display_transform = get_display_transform(ctx, canvas, mouse, opt)
   // listen for keyboard events
   document.addEventListener('keydown', function (e) {
     keys_pressed[e.key] = true
@@ -434,7 +454,7 @@ function handle_movement(){
   let closest_distance = 9999
   let closest_angle = 10
   let closest_node_id = null
-  Object.entries(tree).forEach(([k,node]) => {
+  Object.entries(nodes).forEach(([k,node]) => {
     // skip hidden and locked
     if (node.hidden || node.locked) return
     dy = node.pos[1] - pos[1]
@@ -504,9 +524,9 @@ function click_is_close(pos){
 }
 function click(x, y){
   // detect if any node was clicked
-  if (!tree) return
+  if (!nodes) return
   [x,y] = mouse_to_game_coords(x, y)
-  Object.entries(tree).forEach(([id, node]) => {
+  Object.entries(nodes).forEach(([id, node]) => {
     if (!node) return
     if(hit_node(x, y, node)){
       // if current node, purchase it,
@@ -530,27 +550,6 @@ function mouse_to_game_coords(x, y){
   x /= mat[0]
   y /= mat[3]
   return [x,y]
-}
-
-/*
-  [DRAW] drawing related functions
-*/
-function draw(){
-  // update the transform
-  game.display_transform.update()
-  // set home transform to clear the screem
-  game.display_transform.setHome()
-  // draw background
-  // [optimize] only redraw necessary parts?
-  ctx.rect(0, 0, canvas.width, canvas.height)
-  ctx.fillStyle = game.options.theme.bgcolor
-  ctx.fill()
-  // draw tree
-  game.display_transform.setTransform()
-  draw_tree(ctx, game)
-  if (game.debugtext)
-    draw_debug_text(ctx, game.debugtext)
-  requestAnimationFrame(draw)
 }
 
 /*
@@ -589,8 +588,6 @@ function update_status(category, status, fade=true){
   }
 }
 
-
-
 function update_hud(){
   // clear hud and resource list
   let hud = document.getElementById('hud_left')
@@ -600,7 +597,7 @@ function update_hud(){
 
   // current character info
   let c = current_character()
-  let charhtml = '<img class="portrait pixelated" src="'+c.img+'"> Level '+c.level+' '+c.classy
+  let charhtml = '<img class="portrait pixelated" src="'+c.portrait+'"> Level '+c.level+' '+c.classy
 
   // resource list
   let reshtml = ''
@@ -682,18 +679,6 @@ game.autopan = function(){
   }
 }
 
-function draw_debug_text(ctx, text){
-  ctx.fillStyle = '#fff'
-  ctx.textAlign = 'right'
-  ctx.font = '12px sans-serif'
-  let x = canvas.width-12, y = 24
-  let lines = text.split('\n')
-  game.display_transform.setHome()
-  lines.forEach((line, i) => {
-    ctx.fillText(line, x, y+(i*12))
-  })
-}
-
 // update conversion ui based on conversion rates and selected currencies
 function update_conversion(){
   let result = convert_resources()
@@ -726,4 +711,25 @@ function convert_resources(do_conversion=false){
     }
   }
   return result
+}
+
+// get color from theme, return default if not found
+game.get_color = function(key1, key2){
+  let theme = game.options.theme
+  let color = theme.default
+  if (theme[key1]){
+    if(theme[key1].constructor != Object){
+      color = theme[key1]
+    }else if (key2){
+      if (theme[key1][key2])
+        color = theme[key1][key2]
+      else if (theme[key1]['default'])
+        color = theme[key1]['default']
+    }
+  }
+  return color
+}
+
+game.error = function(err){
+  console.error(err)
 }
