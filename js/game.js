@@ -64,6 +64,7 @@ in fact we should only need to draw nodes once?
 import {clearelem, get, load_image, deep_merge, deep_copy, hit_circle, get_display_transform} from './util.js'
 import Draw from './draw.js'
 import Tree from './tree.js'
+import Animate from './animate.js'
 import {init_characters} from './characters.js'
 import {get_string} from './strings.js'
 
@@ -76,13 +77,15 @@ game.options={
   'autosave_interval': 60000,
   'click_margin': 16,
   'zoom_min': 0.5, // TODO change min zoom based on amount of tree revealed
+  'zoom_default': 1,
   'zoom_max': 2,
   'animation_speed': 1.0, // higher numbers are faster, 0 for off
   'max_travel_dist': 2,
   'lang': 'en',
-  'node_size': [104,64],
-  'node_distance': [146,90],
+  'node_size': [104, 64],
+  'node_distance': [146, 90],
   'node_text_margin': 24,
+  'node_font_size': 12,
   'autopan': true,
   'autopan_margin': 0.5,
   'show_node_details': true,
@@ -107,6 +110,8 @@ game.dontsave = false
 game.images = {}
 game.hide_hint = {}
 game.onrespec = {'pre':[]}
+game.animations = []
+game.nodes_to_redraw = new Set()
 var canvas, ctx            // canvas and drawing context
 var vw, vh                 // viewport height/width
 var keys_pressed = {}
@@ -160,6 +165,7 @@ function init_game(){
   init_listeners()
   document.getElementById('loading_overlay').classList.add('hidden')
   game.draw = new Draw(game)
+  game.animate = new Animate(game)
 }
 
 // convert svg paths to point arrays
@@ -258,6 +264,8 @@ function respec(){
   nodes['0'].locked = false
   nodes['0'].selected = true
   update_hud()
+  // redraw tree
+  game.tree.draw()
   game.dontsave = false
 }
 
@@ -313,12 +321,13 @@ function unlock_neighbors(node){
   node.unlocks.forEach((id) => {
     if (!nodes.hasOwnProperty(id)) return
     r[id] = true
-    if (game.options.animation_speed <= 0 || !nodes[id].hidden){
-      nodes[id].locked = false
-      nodes[id].hidden = false
+    let neighbor = nodes[id]
+    if (game.options.animation_speed <= 0 || !neighbor.hidden){
+      neighbor.locked = false
+      neighbor.hidden = false
     }else{
-      nodes[id].link_t = 0
-      nodes[id].outline_t = 0
+      game.animate.reveal_node(neighbor, node)
+      // TODO cancel animations on respec etc.
     }
   })
 }
@@ -343,6 +352,8 @@ game.purchase_node = function(node){
   if (typeof node.onactivate === 'function') node.onactivate(game)
   unlock_neighbors(node)
   update_hud()
+  // redraw node
+  game.nodes_to_redraw.add(node)
 }
 
 /*
@@ -383,18 +394,19 @@ function init_listeners(){
   let opt = {
     'zoom_min': game.options.zoom_min,
     'zoom_max': game.options.zoom_max,
+    'zoom_default': game.options.zoom_default
   }
   game.display_transform = get_display_transform(ctx, canvas, mouse, opt)
   // listen for keyboard events
   document.addEventListener('keydown', function (e) {
-    keys_pressed[e.key] = true
+    keys_pressed[e.key.toLowerCase()] = true
     handle_keyboard_input()
   })
   document.addEventListener('keyup', function (e) {
     if (e.key == ' '){
       e.preventDefault()
     }
-    keys_pressed[e.key] = false
+    keys_pressed[e.key.toLowerCase()] = false
   })
   // listen for mouse events on canvas
   canvas.addEventListener('mousemove', mouse_move)
@@ -429,21 +441,21 @@ function handle_keyboard_input(){
 function handle_movement(){
   // determine angle based on combination of wasd
   let dx = 0, dy = 0
-  if (keys_pressed.w || keys_pressed.ArrowUp){
+  if (keys_pressed.w || keys_pressed.urrowup){
     dy += -1
-    keys_pressed.w = keys_pressed.ArrowUp = false
+    keys_pressed.w = keys_pressed.arrowup = false
   }
-  if (keys_pressed.s || keys_pressed.ArrowDown){
+  if (keys_pressed.s || keys_pressed.arrowdown){
     dy += 1
-    keys_pressed.s = keys_pressed.ArrowDown = false
+    keys_pressed.s = keys_pressed.arrowdown = false
   }
-  if (keys_pressed.a || keys_pressed.ArrowLeft){
+  if (keys_pressed.a || keys_pressed.arrowleft){
     dx += -1
-    keys_pressed.a = keys_pressed.ArrowLeft = false
+    keys_pressed.a = keys_pressed.arrowleft = false
   }
-  if (keys_pressed.d || keys_pressed.ArrowRight){
+  if (keys_pressed.d || keys_pressed.arrowright){
     dx += 1
-    keys_pressed.d = keys_pressed.ArrowRight = false
+    keys_pressed.d = keys_pressed.arrowright = false
   }
   if (dy == 0 && dx == 0) return
   let angle = Math.atan2(dy, dx)

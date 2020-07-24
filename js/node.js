@@ -20,14 +20,17 @@ export default class Node {
     this.canvas = document.createElement('canvas')
     this.w = this.game.options.node_size[0]
     this.h = this.game.options.node_size[1]
-    this.canvas.width = this.game.options.node_size[0]
-    this.canvas.height = this.game.options.node_size[1]
+    this.canvas.width = this.game.options.node_distance[0]
+    this.canvas.height = this.game.options.node_distance[1]
+    this.padx = Math.ceil(this.canvas.width*0.5 - this.w*0.5)
+    this.pady = Math.ceil(this.canvas.height*0.5 - this.h*0.5)
     this.ctx = this.canvas.getContext('2d')
     this.points = game.node_shapes[this.shape]
   }
 
   init(){
     this.unlocks = []
+    this.parents = new Set()
     this.hidden = true
     this.locked = true
     this.selected = false
@@ -55,20 +58,25 @@ export default class Node {
   }
 
   draw(){
+    this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height)
     let color = this.game.get_color('nodes', this.status)
     this.ctx.fillStyle = color
     // partial outline when animating
-    let t = 1
+    let t = 1.0
     if (this.outline_t != undefined)
       t = this.outline_t
-    // add stroke if node is selected
+    let x = this.padx
+    let y = this.pady
+
+    // outline node if selected
     if (this.selected){
-      color = this.game.get_color('nodes', 'selected')
-      this.ctx.strokeStyle = color
-      this.ctx.lineWidth = 8
+      this.ctx.strokeStyle = this.game.get_color('nodes', 'selected')
+      let strokew = this.game.options.selected_stroke_width || 8
+      this.ctx.lineWidth = strokew
       this.ctx.setLineDash([])
     }
-    draw_points(this.ctx, 0, 0, this.points, t, true, this.selected)
+
+    draw_points(this.ctx, x, y, this.points, t, true, this.selected)
 
     // don't draw text while node is animating
     if (this.link_t!=undefined && this.link_t < 1) return
@@ -81,15 +89,15 @@ export default class Node {
     let margin = this.game.options.node_text_margin
     let w = this.game.options.node_size[0]
     let h = this.game.options.node_size[1]
-    let x = w*0.5
-    let y = h*0.5
+    let x = w*0.5+this.padx
+    let y = h*0.5+this.pady
     if(text)
       draw_text(this.ctx, text, x, y, w-margin, this.game, 'center', 3)
     // draw cost in bottom left
     if (this.status != 'activated'){
       let cost = this.get_cost()+' 🌰'
-      let costx = -w*0.5+14
-      let costy = h*0.5+2
+      let costx = x-w*0.5+14
+      let costy = y+h*0.5+2
       this.ctx.fillStyle = this.game.get_color('nodes', 'cost')
       let costw = this.ctx.measureText(cost).width
       let ox = (costw-26)*0.5

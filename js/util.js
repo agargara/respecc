@@ -134,19 +134,19 @@ export function get_display_transform(ctx, canvas, mouse, options){
     y:-canvas.height/2,
     ox:0,
     oy:0,
-    scale:1,
+    scale:options.zoom_default,
     rotate:0,
     cx:-canvas.width/2,
     cy:-canvas.height/2,
     cox:0,
     coy:0,
-    cscale:1,
+    cscale:options.zoom_default,
     crotate:0,
     dx:0,  // deltat values
     dy:0,
     dox:0,
     doy:0,
-    dscale:1,
+    dscale:options.zoom_default,
     drotate:0,
     drag:0.1,  // drag for movements
     accel:0.7, // acceleration

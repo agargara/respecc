@@ -21,8 +21,15 @@ export default class Draw {
     this.clear()
     // draw FPS
     this.draw_debug(this.get_fps(time)+'fps')
+    // redraw nodes as necessary
+    this.game.nodes_to_redraw.forEach((node)=>{
+      this.game.tree.redraw_node(node)
+    })
+    this.game.nodes_to_redraw.clear()
     // draw tree canvas
     this.draw_tree()
+    // draw characters
+    this.draw_characters()
     requestAnimationFrame((time)=>{this.draw(time)})
   }
 
@@ -66,41 +73,25 @@ export default class Draw {
     const avg = (sum / this.times.length) || 0
     return Math.ceil(1000/avg)
   }
+
+  draw_characters(){
+    if (!this.game.images.characters) return
+    // Draw each character
+    let offset = this.game.options.node_size[1]-16
+    Object.values(this.game.characters).forEach(chara => {
+      let pos = this.game.gridpos_to_realpos(chara.pos)
+      // TODO draw just part of characters.png based on character class
+      // TODO offset x&y when multiple characters on node
+      this.ctx.imageSmoothingEnabled = false
+      this.ctx.drawImage(this.game.images.characters, pos[0]-offset, pos[1]-offset)
+      this.ctx.imageSmoothingEnabled = true
+    })
+  }
 }
 
 
 /*
 function draw_tree(ctx, game){
-  let tree = game.tree
-  if(!tree)
-    return
-  // get nodes to draw
-  let nodes_to_draw = []
-  Object.values(tree).forEach(node => {
-    if(node.hidden==false){
-      nodes_to_draw.push(node)
-    }
-  })
-
-  // Draw connections between nodes
-  nodes_to_draw.forEach(node => {
-    node.unlocks.forEach(id => {
-      let neighbor = tree[id]
-      if(neighbor){
-        if(!neighbor.hidden || neighbor.link_t != undefined){
-          animate(neighbor, game)
-          draw_connection(ctx, node, neighbor, game)
-        }
-      }
-    })
-  })
-
-  // Draw nodes themselves
-  nodes_to_draw.forEach(node => {
-    animate(node, game)
-    node.draw()
-  })
-
   // Draw characters
   draw_characters(ctx, game)
 
@@ -129,92 +120,10 @@ function animate(node, game){
   }
 }
 
-export function draw_connection(ctx, node1, node2, game){
-  let [x1, y1, x2, y2] = get_connection_points(node1, node2, game)
-  // control point
-  let cx = x2
-  let cy = y1
-  // progress
-  let t = 1.0
-  if (node2.link_t!=undefined)
-    t = node2.link_t
-  let color
-  // dashed line if destination is locked and visible
-  if (node2.locked && !node2.hidden && !(node2.outline_t!=undefined && node2.outline_t < 1)){
-    color = game.get_color('nodes', 'link_locked')
-    ctx.setLineDash([6, 6])
-  }else{
-    color = game.get_color('nodes', 'link')
-    ctx.setLineDash([])
-  }
-  ctx.lineWidth = 8
-  ctx.strokeStyle = color
-  drawBezierSplit(ctx, x1, y1, cx, cy, x2, y2, 0, t)
-}
-
-// [optimize] don't recalculate this stuff every draw frame...
-function get_connection_points(node1, node2, game){
-  let [x1, y1] = game.gridpos_to_realpos(node1.pos)
-  let [x2, y2] = game.gridpos_to_realpos(node2.pos)
-  let xoffset = game.options.node_size[0]*0.5
-  let yoffset = game.options.node_size[1]*0.5
-  // [optimize] there's probably a clever way to simplify the logic below but my brain hurts too much to figure it out
-  if (x1 == x2){
-    if (y2 < y1){
-      // node 2 is directly above node 1:
-      y1 += -yoffset
-      y2 += yoffset
-    }else{
-      // node 2 is directly below node 1:
-      y1 += yoffset
-      y2 += -yoffset
-    }
-  }else{
-    // node 2: left or right of node 1?
-    let sign = 1
-    if (x2 < x1){
-      sign = -1
-    }
-    x1 += xoffset*sign
-    if (y1 == y2){
-      // same level
-      x2 += xoffset*sign
-    }else if (y2 < y1){
-      // up
-      y2 += yoffset
-    }else{
-      // down
-      y2 += -yoffset
-    }
-  }
-  return [x1, y1, x2, y2]
-}
-
-function draw_node_text(ctx, node, game){
-  let text = node.text[game.options.lang]
-  let [x,y] = game.gridpos_to_realpos(node.pos)
-  let margin = game.options.node_text_margin
-  let w = game.options.node_size[0] - margin
-  let h = game.options.node_size[1]
-  if(text)
-    draw_text(ctx, text, x, y, w, game, 'center', 3)
-  // draw cost in bottom left
-  if (node.status === 'deactivated'){
-    let cost = node.get_cost()+' 🌰'
-    let costx = x-w*0.5+14
-    let costy = y+h*0.5+2
-    ctx.fillStyle = game.get_color('nodes', 'cost')
-    let costw = ctx.measureText(cost).width
-    let ox = (costw-26)*0.5
-    draw_round_rect(ctx, costx-18, costy-10, costw+8, 24, 4, true, false)
-    draw_text(ctx, cost, costx+ox, costy, costw+8, game, 'center', 1)
-  }
-}
-
 export function draw_text(ctx, text, x, y, max_width, game, text_align='center', max_lines=3){
   ctx.fillStyle = game.get_color('nodes', 'text')
   ctx.textAlign = text_align
-  let size = 12
+  let size = game.options.node_font_size
   ctx.font = size + 'px sans-serif'
   let lines =  word_wrap(ctx, text, max_width)
   // shrink text to fit in max lines
@@ -230,26 +139,8 @@ export function draw_text(ctx, text, x, y, max_width, game, text_align='center',
   lines.forEach((line, i) => {
     ctx.fillText(line, x, y+(i*lineheight)-yoffset)
   })
-  /* TODO
-  // replace emoji with images
-  ctx.imageSmoothingEnabled = false
-  ctx.drawImage(game.images.sp, x, y) */
+  // TODO replace emoji with images
 }
-
-function draw_characters(ctx, game){
-  if (!game.images.characters) return
-  // Draw each character
-  let offset = game.options.node_size[1]-16
-  Object.values(game.characters).forEach(chara => {
-    let pos = game.gridpos_to_realpos(chara.pos)
-    // TODO draw just part of characters.png based on character class
-    // TODO offset x&y when multiple characters on node
-    ctx.imageSmoothingEnabled = false
-    ctx.drawImage(game.images.characters, pos[0]-offset, pos[1]-offset)
-  })
-}
-
-
 
 // draw a portion of a point array
 export function draw_points(ctx, x, y, points, portion, fill=true, stroke=false){

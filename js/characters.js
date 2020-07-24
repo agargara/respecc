@@ -43,10 +43,13 @@ class Character {
     this.onrespec = {'resources': new DefaultDict(0), 'pre':[]}
     // delete activated nodes except permanent ones
     for (let [nodeid, node] of this.activated_nodes){
-      if (node.permanent)
+      if (node.permanent){
         node.respec()
-      else
+      }else{
+        node.status = 'deactivated'
+        node.selected = false
         this.activated_nodes.delete(nodeid)
+      }
     }
   }
 
@@ -55,17 +58,20 @@ class Character {
   }
 
   move(target){
+    // check that target is valid
+    if(!this.reachable_nodes[target]) return
     let h = this.game.hide_hint['move']
     if (h) h()
+    let cn = this.game.current_node()
+    cn.selected = false
     this.cancel_movement()
+    // redraw source node
+    this.game.nodes_to_redraw.add(cn)
+    this.old_node = cn
     this._move(target)
   }
 
   _move(target){
-    // check that target is valid
-    if(!this.reachable_nodes[target]) return
-    let cn = this.game.current_node()
-    cn.selected = false
     // no animation?
     if (this.game.options.animation_speed <= 0){
       this.pos = this.nodes[target].pos
@@ -82,6 +88,8 @@ class Character {
       this.current_node = target
       this.reachable_nodes[target] = true
       this.nodes[target].selected = true
+      // redraw new node and old node
+      this.game.nodes_to_redraw.add(this.nodes[target])
       return
     }
     this.pos[0] += dx*0.1
@@ -130,6 +138,7 @@ class Character {
     if (!this.image) return
     this.ctx.imageSmoothingEnabled = false
     this.ctx.drawImage(this.image, 0, 0)
+    this.ctx.imageSmoothingEnabled = true
   }
 }
 export function init_characters(game) {

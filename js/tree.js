@@ -1,5 +1,5 @@
 import Node from './node.js'
-import {drawBezierSplit} from './draw.js'
+import {drawBezierSplit, draw_points} from './draw.js'
 
 export default class Tree{
   constructor(game){
@@ -9,11 +9,6 @@ export default class Tree{
     this.canvases = []
     this.canvas_offsets = []
     this.nodes = this.init_tree()
-    Object.values(this.nodes).forEach((node)=>{
-      // TODO for debugging
-      node.hidden = false
-      node.locked = false
-    })
     this.get_bounds()
     this.init_canvases()
     this.draw()
@@ -278,6 +273,13 @@ export default class Tree{
         },
       }),
     }
+    // Add neighbor information to nodes
+    Object.values(nodes).forEach((node)=>{
+      node.unlocks.forEach((neighbor)=>{
+        if (nodes[neighbor] != undefined)
+          nodes[neighbor].parents.add(node)
+      })
+    })
     return nodes
   }
 
@@ -333,6 +335,10 @@ export default class Tree{
   }
 
   draw(){
+    // Draw connections
+    Object.values(this.nodes).forEach((node)=>{
+      this.draw_connections(node)
+    })
     // Draw nodes
     Object.values(this.nodes).forEach(node => {
       if(node.hidden==false){
@@ -340,10 +346,14 @@ export default class Tree{
         this.draw_node(node)
       }
     })
-    // Draw connections
-    Object.values(this.nodes).forEach((node)=>{
-      this.draw_connections(node)
-    })
+  }
+
+  clear_node(node){
+    // determine which canvas to clear
+    let [i,j,x,y] = this.grid_to_treepos(node.pos)
+    let canvas = this.canvases[i][j]
+    let ctx = canvas.getContext('2d')
+    ctx.clearRect(x-node.padx,y-node.pady,node.canvas.width,node.canvas.height)
   }
 
   draw_node(node){
@@ -351,13 +361,30 @@ export default class Tree{
     let [i,j,x,y] = this.grid_to_treepos(node.pos)
     let canvas = this.canvases[i][j]
     let ctx = canvas.getContext('2d')
-    ctx.drawImage(node.canvas, x, y)
+    ctx.drawImage(node.canvas, x-node.padx, y-node.pady)
+  }
+
+  redraw_node(node){
+    // clear canvas
+    this.clear_node(node)
+    // draw connections
+    this.draw_connections(node)
+    node.parents.forEach((parent)=>{
+      this.draw_connections(parent)
+    })
+    // draw nodes
+    node.draw()
+    this.draw_node(node)
   }
 
   draw_connections(node){
     node.unlocks.forEach((id)=>{
       let neighbor = this.nodes[id]
-      if (neighbor && !neighbor.hidden){
+      if (neighbor == undefined)
+        console.log(id)
+      else
+        console.log(node.pos+' => '+neighbor.pos)
+      if (neighbor && (!neighbor.hidden || node.link_t !== undefined)){
         this.draw_connection(node, neighbor)
       }
     })
@@ -369,7 +396,6 @@ export default class Tree{
     let [i2,j2,x2,y2] = this.grid_to_treepos([c,d])
     let canvas = this.canvases[i1][j1]
     let ctx = canvas.getContext('2d')
-    // TODO draw connection in opposite direction
     if (!(i1==i2 && j1==j2)){
       console.log("TODO different canvases")
     }
@@ -384,7 +410,7 @@ export default class Tree{
     // dashed line if destination is locked and visible
     if (node2.locked && !node2.hidden && !(node2.outline_t!=undefined && node2.outline_t < 1)){
       color = this.game.get_color('nodes', 'link_locked')
-      ctx.setLineDash([6, 6])
+      ctx.setLineDash([2, 2])
     }else{
       color = this.game.get_color('nodes', 'link')
       ctx.setLineDash([])
