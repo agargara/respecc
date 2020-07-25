@@ -100,26 +100,6 @@ function draw_tree(ctx, game){
 }
 */
 
-// process node animations
-function animate(node, game){
-  // slowly reveal connections
-  if (node.link_t!=undefined && node.link_t < 1){
-    node.link_t += (0.05*game.options.animation_speed)
-    if (node.link_t >= 1.0){
-      node.hidden = false
-      node.link_t = undefined
-    }
-  }
-  // slowly reveal nodes
-  if (node.outline_t!=undefined && node.outline_t < 1 && !node.hidden){
-    node.outline_t += (0.02*game.options.animation_speed)
-    if (node.outline_t >= 1.0){
-      node.locked = false
-      node.outline_t = undefined
-    }
-  }
-}
-
 export function draw_text(ctx, text, x, y, max_width, game, text_align='center', max_lines=3){
   ctx.fillStyle = game.get_color('nodes', 'text')
   ctx.textAlign = text_align

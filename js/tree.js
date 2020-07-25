@@ -1,5 +1,5 @@
 import Node from './node.js'
-import {drawBezierSplit, draw_points} from './draw.js'
+import {drawBezierSplit} from './draw.js'
 
 export default class Tree{
   constructor(game){
@@ -273,8 +273,9 @@ export default class Tree{
         },
       }),
     }
-    // Add neighbor information to nodes
-    Object.values(nodes).forEach((node)=>{
+    // Add id & neighbor information to nodes
+    Object.entries(nodes).forEach(([id, node])=>{
+      node.id = id
       node.unlocks.forEach((neighbor)=>{
         if (nodes[neighbor] != undefined)
           nodes[neighbor].parents.add(node)
@@ -334,6 +335,15 @@ export default class Tree{
     return canvas
   }
 
+  clear(){
+    this.canvases.forEach((i)=>{
+      i.forEach((j)=>{
+        let ctx = j.getContext('2d')
+        ctx.clearRect(0,0,j.width,j.height)
+      })
+    })
+  }
+
   draw(){
     // Draw connections
     Object.values(this.nodes).forEach((node)=>{
@@ -380,11 +390,7 @@ export default class Tree{
   draw_connections(node){
     node.unlocks.forEach((id)=>{
       let neighbor = this.nodes[id]
-      if (neighbor == undefined)
-        console.log(id)
-      else
-        console.log(node.pos+' => '+neighbor.pos)
-      if (neighbor && (!neighbor.hidden || node.link_t !== undefined)){
+      if (neighbor && (!neighbor.hidden || neighbor.link_t !== undefined)){
         this.draw_connection(node, neighbor)
       }
     })
@@ -397,9 +403,9 @@ export default class Tree{
     let canvas = this.canvases[i1][j1]
     let ctx = canvas.getContext('2d')
     if (!(i1==i2 && j1==j2)){
-      console.log("TODO different canvases")
+      console.log('TODO different canvases')
     }
-    // control point
+    // control points
     let cx = x2
     let cy = y1
     // progress
@@ -407,10 +413,10 @@ export default class Tree{
     if (node2.link_t!=undefined)
       t = node2.link_t
     let color
-    // dashed line if destination is locked and visible
-    if (node2.locked && !node2.hidden && !(node2.outline_t!=undefined && node2.outline_t < 1)){
+    // dashed line if destination is unreachable and visible
+    if (!node2.is_reachable() && !node2.hidden && !(node2.outline_t!=undefined && node2.outline_t < 1)){
       color = this.game.get_color('nodes', 'link_locked')
-      ctx.setLineDash([2, 2])
+      ctx.setLineDash([6, 6])
     }else{
       color = this.game.get_color('nodes', 'link')
       ctx.setLineDash([])

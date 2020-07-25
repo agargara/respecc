@@ -5,30 +5,33 @@ export default class Animate{
   }
 
   // gradually reveal a new node
-  reveal_node(node,parent){
-    node.link_t = 0
-    node.outline_t = 0
-    let interval = setInterval(()=>{
-      // slowly reveal connections
-      if (node.link_t!=undefined){
-        node.link_t += (0.005*this.game.options.animation_speed)
-        if (node.link_t >= 1.0){
-          node.hidden = false
-          node.link_t = undefined
+  reveal_node(source,target){
+    target.link_t = 0
+    target.outline_t = 0
+    return new Promise((resolve, reject) => {
+      let interval = setInterval(()=>{
+        // slowly reveal connections
+        if (target.link_t!=undefined){
+          target.link_t += (0.05*this.game.options.animation_speed)
+          if (target.link_t >= 1.0){
+            target.hidden = false
+            target.link_t = undefined
+          }
         }
-      }
-      // slowly reveal node
-      if (node.outline_t!=undefined && !node.hidden){
-        node.outline_t += (0.02*this.game.options.animation_speed)
-        if (node.outline_t >= 1.0){
-          node.locked = false
-          node.outline_t = undefined
-          clearInterval(interval)
+        // slowly reveal node
+        if (target.outline_t!=undefined && !target.hidden){
+          target.outline_t += (0.02*this.game.options.animation_speed)
+          // finished revealing:
+          if (target.outline_t >= 1.0){
+            target.outline_t = undefined
+            clearInterval(interval)
+            resolve()
+          }
         }
-      }
-      this.game.nodes_to_redraw.add(node)
-      this.game.nodes_to_redraw.add(parent)
-    }, 17)
-    this.animations.push(interval)
+        this.game.nodes_to_redraw.add(source)
+        this.game.nodes_to_redraw.add(target)
+      }, 17)
+      this.animations.push(interval)
+    })
   }
 }

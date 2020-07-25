@@ -32,7 +32,6 @@ export default class Node {
     this.unlocks = []
     this.parents = new Set()
     this.hidden = true
-    this.locked = true
     this.selected = false
     this.link_t = undefined
     this.outline_t = undefined
@@ -40,8 +39,12 @@ export default class Node {
     this.id=''
   }
 
+  is_reachable(){
+    if (!this.id) return false
+    return this.game.current_character().reachable_nodes[this.id]
+  }
+
   respec(){
-    this.locked = true
   }
 
   get_cost(){

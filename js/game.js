@@ -223,7 +223,6 @@ function save(){
   // save tree node status
   Object.entries(nodes).forEach(([k,node])=>{
     save.nodes[k] = {
-      'locked': node.locked,
       'hidden': node.hidden,
       'selected': node.selected
     }
@@ -261,10 +260,10 @@ function respec(){
   Object.values(characters).forEach((char) => {
     char.reset()
   })
-  nodes['0'].locked = false
   nodes['0'].selected = true
   update_hud()
   // redraw tree
+  game.tree.clear()
   game.tree.draw()
   game.dontsave = false
 }
@@ -280,7 +279,6 @@ function reset_all(){
   game.state = {
     'current_character': 'arborist'
   }
-  nodes['0'].locked = false
   // display purchase node hint after 5 seconds
   window.setTimeout(() => {
     let move_hint = function(){
@@ -320,13 +318,14 @@ function unlock_neighbors(node){
   let r = current_character().reachable_nodes
   node.unlocks.forEach((id) => {
     if (!nodes.hasOwnProperty(id)) return
-    r[id] = true
     let neighbor = nodes[id]
     if (game.options.animation_speed <= 0 || !neighbor.hidden){
-      neighbor.locked = false
       neighbor.hidden = false
+      r[id] = true
     }else{
-      game.animate.reveal_node(neighbor, node)
+      game.animate.reveal_node(node, neighbor).then(
+        r[id] = true
+      )
       // TODO cancel animations on respec etc.
     }
   })
@@ -362,11 +361,11 @@ game.purchase_node = function(node){
 function init_listeners(){
   window.addEventListener('resize', resize)
   // navigation buttons
-  Array.from(document.getElementById('navigation').children).forEach((node)=>{
-    if (!node.id || !node.id.startsWith('nav-')) return
-    let tab_id = node.id.replace('nav-', '')
-    node.addEventListener('click', ()=>{
-      open_tab(tab_id, node)
+  Array.from(document.getElementById('navigation').children).forEach((btn)=>{
+    if (!btn.id || !btn.id.startsWith('nav-')) return
+    let tab_id = btn.id.replace('nav-', '')
+    btn.addEventListener('click', ()=>{
+      open_tab(tab_id, btn)
     })
   })
   // button events
@@ -467,8 +466,8 @@ function handle_movement(){
   let closest_angle = 10
   let closest_node_id = null
   Object.entries(nodes).forEach(([k,node]) => {
-    // skip hidden and locked
-    if (node.hidden || node.locked) return
+    // skip hidden and unreachable
+    if (node.hidden || !node.is_reachable()) return
     dy = node.pos[1] - pos[1]
     dx = node.pos[0] - pos[0]
     // skip current position
