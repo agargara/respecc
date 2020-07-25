@@ -385,6 +385,10 @@ export default class Tree{
     // draw nodes
     node.draw()
     this.draw_node(node)
+    node.parents.forEach((parent)=>{
+      parent.draw()
+      this.draw_node(parent)
+    })
   }
 
   draw_connections(node){

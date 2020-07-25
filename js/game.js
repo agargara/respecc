@@ -333,7 +333,7 @@ function unlock_neighbors(node){
 // check if x, y is within node
 function hit_node(x, y, node){
   let pos = game.gridpos_to_realpos(node.pos)
-  return hit_circle(x, y, pos[0], pos[1], game.options.node_size[0])
+  return hit_circle(x, y, pos[0], pos[1], game.options.node_size[0]*0.5)
 }
 // convert grid position to real position
 game.gridpos_to_realpos = function(gridpos){
@@ -534,11 +534,12 @@ function click_is_close(pos){
     return false
 }
 function click(x, y){
+  console.log('click '+x+','+y)
   // detect if any node was clicked
   if (!nodes) return
   [x,y] = mouse_to_game_coords(x, y)
-  Object.entries(nodes).forEach(([id, node]) => {
-    if (!node) return
+  Object.entries(nodes).some(([id, node]) => {
+    if (!node) return false
     if(hit_node(x, y, node)){
       // if current node, purchase it,
       // otherwise move to it
@@ -546,6 +547,7 @@ function click(x, y){
         current_character().purchase()
       else
         current_character().move(id)
+      return true
     }
   })
 }
