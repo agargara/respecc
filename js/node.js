@@ -78,24 +78,21 @@ export default class Node {
       this.ctx.lineWidth = strokew
       this.ctx.setLineDash([])
     }
-
     draw_points(this.ctx, x, y, this.points, t, true, this.selected)
-
-    // don't draw text while node is animating
-    if (this.link_t!=undefined && this.link_t < 1) return
-    if (this.outline_t!=undefined && this.outline_t < 1) return
-    this.draw_node_text()
   }
 
+  // [optimize] this method is currently unused, as text is redrawn every frame on the main canvas to get better resolution. At high node counts it might be necessary to use this method instead to prevent costly fillText operations every frame
   draw_node_text(){
-    let text = this.text[this.game.options.lang]
-    let margin = this.game.options.node_text_margin
     let w = this.game.options.node_size[0]
     let h = this.game.options.node_size[1]
     let x = w*0.5+this.padx
     let y = h*0.5+this.pady
+
+    let text = this.text[this.game.options.lang]
+    let margin = this.game.options.node_text_margin
     if(text)
       draw_text(this.ctx, text, x, y, w-margin, this.game, 'center', 3)
+
     // draw cost in bottom left
     if (this.status != 'activated'){
       let cost = this.get_cost()+' 🌰'

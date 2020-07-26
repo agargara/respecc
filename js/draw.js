@@ -48,6 +48,11 @@ export default class Draw {
         this.ctx.drawImage(c, offset[0],offset[1])
       }
     }
+    // redraw node text (workaround for high-res text)
+    Object.values(this.game.nodes).forEach((node)=>{
+      if (!node.hidden && node.link_t==undefined && node.outline_t==undefined)
+        this.draw_node_text(node)
+    })
   }
 
   draw_debug(text){
@@ -84,18 +89,27 @@ export default class Draw {
       this.ctx.imageSmoothingEnabled = true
     })
   }
+
+  draw_node_text(node){
+    let text = node.text[this.game.options.lang]
+    if (!text) return
+    let margin = this.game.options.node_text_margin
+    let [w,h] = this.game.options.node_size
+    let [x,y] = this.game.gridpos_to_realpos(node.pos)
+    draw_text(this.ctx, text, x, y, w-margin, this.game, 'center', 3)
+    // draw cost in bottom left
+    if (node.status != 'activated'){
+      let cost = node.get_cost()+' 🌰'
+      let costx = x-w*0.5+14
+      let costy = y+h*0.5-2
+      this.ctx.fillStyle = this.game.get_color('nodes', 'cost')
+      let costw = this.ctx.measureText(cost).width
+      let ox = (costw-26)*0.5
+      draw_round_rect(this.ctx, costx-18, costy-10, costw+8, 24, 4, true, false)
+      draw_text(this.ctx, cost, costx+ox, costy, costw+8, this.game, 'center', 1)
+    }
+  }
 }
-
-
-/*
-function draw_tree(ctx, game){
-  // Draw characters
-  draw_characters(ctx, game)
-
-  // Draw node's detail description
-  draw_node_detail(ctx, game)
-}
-*/
 
 export function draw_text(ctx, text, x, y, max_width, game, text_align='center', max_lines=3){
   ctx.fillStyle = game.get_color('nodes', 'text')

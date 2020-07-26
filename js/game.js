@@ -2,6 +2,7 @@
   HIGH
   try drawing text on main canvas?
     add more nodes
+  reimplement draw_node_detail
 
   MEDIUM
   switching characters
