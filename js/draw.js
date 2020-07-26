@@ -21,11 +21,8 @@ export default class Draw {
     this.clear()
     // draw FPS
     this.draw_debug(this.get_fps(time)+'fps')
-    // redraw nodes as necessary
-    this.game.nodes_to_redraw.forEach((node)=>{
-      this.game.tree.redraw_node(node)
-    })
-    this.game.nodes_to_redraw.clear()
+    // redraw changed nodes
+    this.game.tree.redraw_nodes()
     // draw tree canvas
     this.draw_tree()
     // draw characters

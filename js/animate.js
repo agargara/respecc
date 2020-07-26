@@ -40,8 +40,8 @@ export default class Animate{
             resolve()
           }
         }
-        this.game.nodes_to_redraw.add(source)
-        this.game.nodes_to_redraw.add(target)
+        this.game.tree.nodes_to_redraw.add(source)
+        this.game.tree.nodes_to_redraw.add(target)
       }, 17)
       this.animations.push(interval)
       this.cancel_functions.push(()=>{

@@ -55,8 +55,8 @@ var characters
 var game = {}
 window.game = game // allow console access for easy debugging TODO delete this?
 game.options={
-  'autosave': false,
-  'autosave_interval': 5000,
+  'autosave': true,
+  'autosave_interval': 3000,
   'click_margin': 16,
   'zoom_min': 0.5, // TODO change min zoom based on amount of tree revealed
   'zoom_default': 1,
@@ -92,8 +92,6 @@ game.dontsave = false
 game.images = {}
 game.hide_hint = {}
 game.onrespec = {'pre':[]}
-game.animations = []
-game.nodes_to_redraw = new Set()
 var canvas, ctx            // canvas and drawing context
 var vw, vh                 // viewport height/width
 var keys_pressed = {}
@@ -146,6 +144,7 @@ function init_game(){
   }
   init_listeners()
   document.getElementById('loading_overlay').classList.add('hidden')
+
   game.draw = new Draw(game)
   game.animate = new Animate(game)
 }
@@ -185,9 +184,13 @@ function load(){
       }
     )
     game.options = save.options
-
     deep_merge(save.nodes, game.nodes)
     deep_merge(save.characters, characters)
+    Object.values(characters).forEach((chara)=>{
+      chara.reactivate_nodes()
+    })
+    // redraw tree with new node info
+    game.tree.draw()
   }
 }
 
@@ -206,7 +209,8 @@ function save(){
   Object.entries(nodes).forEach(([k,node])=>{
     save.nodes[k] = {
       'hidden': node.hidden,
-      'selected': node.selected
+      'selected': node.selected,
+      'status': node.status
     }
   })
   // save relevant info about characters
@@ -215,7 +219,7 @@ function save(){
       'current_node': chara.current_node,
       'pos': chara.pos,
       'reachable_nodes': chara.reachable_nodes,
-      'activated_nodes': chara.activated_nodes,
+      'nodes_to_activate': Array.from(chara.activated_nodes.keys()),
       'resources': chara.resources,
     }
   })
@@ -251,6 +255,7 @@ function respec(){
   game.tree.clear()
   game.tree.draw()
   game.dontsave = false
+  console.log(game.nodes)
 }
 
 function reset_all(){
@@ -259,6 +264,7 @@ function reset_all(){
   game.tree = new Tree(game)
   nodes = game.tree.nodes
   game.nodes = nodes
+  nodes['0'].selected = true
   characters = init_characters(game)
   game.characters = characters
   game.state = {
@@ -308,10 +314,9 @@ function unlock_neighbors(node){
       neighbor.hidden = false
       r[id] = true
     }else{
-      game.animate.reveal_node(node, neighbor).then(
+      game.animate.reveal_node(node, neighbor).then(()=>{
         r[id] = true
-      )
-      // TODO cancel animations on respec etc.
+      }, ()=>{})
     }
   })
 }
@@ -337,7 +342,7 @@ game.purchase_node = function(node){
   unlock_neighbors(node)
   update_hud()
   // redraw node
-  game.nodes_to_redraw.add(node)
+  game.tree.nodes_to_redraw.add(node)
 }
 
 /*
@@ -519,7 +524,6 @@ function click_is_close(pos){
     return false
 }
 function click(x, y){
-  console.log('click '+x+','+y)
   // detect if any node was clicked
   if (!nodes) return
   [x,y] = mouse_to_game_coords(x, y)

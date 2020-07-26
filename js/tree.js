@@ -9,6 +9,7 @@ export default class Tree{
     this.canvases = []
     this.canvas_offsets = []
     this.nodes = this.init_tree()
+    this.nodes_to_redraw = new Set()
     this.get_bounds()
     this.init_canvases()
     this.draw()
@@ -29,7 +30,6 @@ export default class Tree{
         'onactivate': function(game){
           game.current_character().resources.sp.amount += 1
         },
-        'selected': true
       }),
       '1': new Node(game, this, {
         'pos': [ 0, -1 ],
@@ -373,6 +373,13 @@ export default class Tree{
     let canvas = this.canvases[i][j]
     let ctx = canvas.getContext('2d')
     ctx.drawImage(node.canvas, x-node.padx, y-node.pady)
+  }
+
+  redraw_nodes(){
+    this.nodes_to_redraw.forEach((node)=>{
+      this.redraw_node(node)
+    })
+    this.nodes_to_redraw.clear()
   }
 
   redraw_node(node){

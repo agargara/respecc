@@ -15,6 +15,7 @@ class Character {
     this.level = 1
     this.portrait = 'img/portraits/'+this.classy+'.png'
     this.activated_nodes = new Map()
+    this.nodes_to_activate = []
     this.resources = init_resources()
     this.onrespec = {'resources': new DefaultDict(0), 'pre':[]}
     this.canvas = document.createElement('canvas')
@@ -26,6 +27,7 @@ class Character {
   }
 
   reset(){
+    this.nodes[this.current_node].selected = false
     this.current_node = this.start_node
     this.pos = Array.from(this.nodes[this.current_node].pos)
     this.reachable_nodes = {
@@ -66,7 +68,7 @@ class Character {
     cn.selected = false
     this.cancel_movement()
     // redraw source node
-    this.game.nodes_to_redraw.add(cn)
+    this.game.tree.nodes_to_redraw.add(cn)
     this.old_node = cn
     this._move(target)
   }
@@ -89,7 +91,7 @@ class Character {
       this.reachable_nodes[target] = true
       this.nodes[target].selected = true
       // redraw new node and old node
-      this.game.nodes_to_redraw.add(this.nodes[target])
+      this.game.tree.nodes_to_redraw.add(this.nodes[target])
       return
     }
     this.pos[0] += dx*0.1
@@ -132,6 +134,14 @@ class Character {
       return 'activated'
     else
       return 'deactivated'
+  }
+
+  reactivate_nodes(){
+    if (!this.nodes_to_activate) return
+    this.nodes_to_activate.forEach((nodeid) => {
+      let node = this.nodes[nodeid]
+      this.activated_nodes.set(nodeid, node)
+    })
   }
 
   draw(){
