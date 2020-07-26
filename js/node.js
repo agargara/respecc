@@ -100,7 +100,7 @@ export default class Node {
     if (this.status != 'activated'){
       let cost = this.get_cost()+' 🌰'
       let costx = x-w*0.5+14
-      let costy = y+h*0.5+2
+      let costy = y+h*0.5-2
       this.ctx.fillStyle = this.game.get_color('nodes', 'cost')
       let costw = this.ctx.measureText(cost).width
       let ox = (costw-26)*0.5

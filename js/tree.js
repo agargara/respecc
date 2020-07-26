@@ -12,7 +12,6 @@ export default class Tree{
     this.nodes_to_redraw = new Set()
     this.get_bounds()
     this.init_canvases()
-    this.draw()
   }
 
   init_tree(){

@@ -1,15 +1,13 @@
 /* TODO
   HIGH
-  fix save/load
-  fix animations which happen on respec
-  (disallow respec during animations?)
   try drawing text on main canvas?
+    add more nodes
 
   MEDIUM
   switching characters
     - set node statuses based on character
   level up mechanic
-  add more nodes
+
   more cool looking node shapes
   use own icons instead of emojis
     https://codepen.io/Matnard/pen/mAlEJ
@@ -49,46 +47,14 @@ import Tree from './tree.js'
 import Animate from './animate.js'
 import {init_characters} from './characters.js'
 import {get_string} from './strings.js'
+import {options} from './options.js'
 
 var nodes
 var characters
 var game = {}
 window.game = game // allow console access for easy debugging TODO delete this?
-game.options={
-  'autosave': true,
-  'autosave_interval': 3000,
-  'click_margin': 16,
-  'zoom_min': 0.5, // TODO change min zoom based on amount of tree revealed
-  'zoom_default': 1,
-  'zoom_max': 2,
-  'animation_speed': 1.0, // higher numbers are faster, 0 for off
-  'max_travel_dist': 2,
-  'lang': 'en',
-  'node_size': [104, 64],
-  'node_distance': [146, 90],
-  'node_text_margin': 24,
-  'node_font_size': 12,
-  'autopan': true,
-  'autopan_margin': 0.5,
-  'show_node_details': true,
-  'theme': {
-    'default': '#f00',
-    'bgcolor': '#080E07', // rich black
-    'nodes': {
-      'link': '#fff',
-      'link_locked': '#999',
-      'deactivated': '#9a9',
-      'activated': '#fff',
-      'selected': '#8E9B58',
-      'text': '#000',
-      'cost': '#4d7250',
-      'detailbg': '#c2b7e8',
-      'detailborder': '#6b57a5',
-      'detailtext': '#000',
-    }
-  }
-}
-game.dontsave = false
+game.options=options
+game.dontsave = true // disallow saving until game is loaded
 game.images = {}
 game.hide_hint = {}
 game.onrespec = {'pre':[]}
@@ -124,29 +90,56 @@ function load_assets(){
         game.images['characters'] = results[1].value
       if (results[2].status === 'fulfilled')
         game.images['sp'] = results[2].value
-      init_game()
+      init()
     })
 }
 
-function init_game(){
+function init(){
   init_svgs()
-  reset_all()
+  init_game()
+  init_hints()
+  load() // load save data
+  update_hud()
+  update_conversion()
+  // draw tree
+  game.tree.draw()
+  game.animate = new Animate(game)
+  // draw everything
+  game.draw = new Draw(game)
+  // hide the loading screen
+  document.getElementById('loading_overlay').classList.add('hidden')
+  // allow input
+  init_listeners()
+  // start autosave
+  if (game.options.autosave){
+    game.autosave_timer = setInterval(save, game.options.autosave_interval)
+  }
+  // done with init, allow saving
+  game.dontsave = false
+}
+
+function init_game(){
+  game.unlocks = {}
+  game.tree = new Tree(game)
+  nodes = game.tree.nodes
+  game.nodes = nodes
+  characters = init_characters(game)
+  game.characters = characters
+  game.state = {
+    'current_character': 'arborist'
+  }
   canvas = document.getElementById('game_screen')
   ctx = canvas.getContext('2d')
   game.canvas = canvas
   game.ctx = ctx
-  resize()
-  load() // load save data
-  update_hud()
-  update_conversion()
-  if (game.options.autosave){
-    game.autosave_timer = setInterval(save, game.options.autosave_interval)
+  resize() // resize canvas based on viewport
+  // get display transform to handle zoom and pan
+  let opt = {
+    'zoom_min': game.options.zoom_min,
+    'zoom_max': game.options.zoom_max,
+    'zoom_default': game.options.zoom_default
   }
-  init_listeners()
-  document.getElementById('loading_overlay').classList.add('hidden')
-
-  game.draw = new Draw(game)
-  game.animate = new Animate(game)
+  game.display_transform = get_display_transform(ctx, canvas, mouse, opt)
 }
 
 // convert svg paths to point arrays
@@ -170,6 +163,23 @@ function path_to_points(path){
   return points
 }
 
+function init_hints(){
+  // display purchase node hint after 5 seconds
+  window.setTimeout(() => {
+    let move_hint = function(){
+      if (current_character().activated_nodes.size == 1 && current_node_id() == 0){
+        // display movement hint if player hasn't moved
+        hint('move')
+      }
+    }
+    if (current_character().activated_nodes.size < 1){
+      hint('purchasenode', move_hint)
+    }else{
+      move_hint()
+    }
+  }, 3000)
+}
+
 /*
   [GAME] core game functions
 */
@@ -189,8 +199,6 @@ function load(){
     Object.values(characters).forEach((chara)=>{
       chara.reactivate_nodes()
     })
-    // redraw tree with new node info
-    game.tree.draw()
   }
 }
 
@@ -249,41 +257,10 @@ function respec(){
   Object.values(characters).forEach((char) => {
     char.reset()
   })
-  nodes['0'].selected = true
   update_hud()
   // redraw tree
   game.tree.clear()
   game.tree.draw()
-  game.dontsave = false
-  console.log(game.nodes)
-}
-
-function reset_all(){
-  game.dontsave = true
-  game.unlocks = {}
-  game.tree = new Tree(game)
-  nodes = game.tree.nodes
-  game.nodes = nodes
-  nodes['0'].selected = true
-  characters = init_characters(game)
-  game.characters = characters
-  game.state = {
-    'current_character': 'arborist'
-  }
-  // display purchase node hint after 5 seconds
-  window.setTimeout(() => {
-    let move_hint = function(){
-      if (current_character().activated_nodes.size == 1 && current_node_id() == 0){
-        // display movement hint if player hasn't moved
-        hint('move')
-      }
-    }
-    if (current_character().activated_nodes.size < 1){
-      hint('purchasenode', move_hint)
-    }else{
-      move_hint()
-    }
-  }, 3000)
   game.dontsave = false
 }
 
@@ -363,10 +340,8 @@ function init_listeners(){
     convert_resources(true)
   })
   document.getElementById('btn_reset').addEventListener('click', ()=>{
-    // TODO delete save is for debug purposes only
-    update_status('resetting all')
     localStorage.removeItem('save')
-    reset_all
+    location.reload()
   })
   document.getElementById('btn_cheat').addEventListener('click', ()=>{
     Object.values(current_character().resources).forEach((res)=>{
@@ -378,14 +353,6 @@ function init_listeners(){
   document.getElementById('num_convert_a').addEventListener('input', ()=>{
     update_conversion()
   })
-
-  // get display transform to handle zoom and pan
-  let opt = {
-    'zoom_min': game.options.zoom_min,
-    'zoom_max': game.options.zoom_max,
-    'zoom_default': game.options.zoom_default
-  }
-  game.display_transform = get_display_transform(ctx, canvas, mouse, opt)
   // listen for keyboard events
   document.addEventListener('keydown', function (e) {
     keys_pressed[e.key.toLowerCase()] = true
