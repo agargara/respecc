@@ -29,7 +29,6 @@ class Character {
   reset(){
     this.nodes[this.current_node].selected = false
     this.current_node = this.start_node
-    this.nodes[this.current_node].selected = true
     this.pos = Array.from(this.nodes[this.current_node].pos)
     this.reachable_nodes = {
       '0': true
@@ -54,6 +53,8 @@ class Character {
         this.activated_nodes.delete(nodeid)
       }
     }
+    // select current node
+    this.nodes[this.current_node].selected = true
   }
 
   cancel_movement(){

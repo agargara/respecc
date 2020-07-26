@@ -124,6 +124,7 @@ function init_game(){
   game.tree = new Tree(game)
   nodes = game.tree.nodes
   game.nodes = nodes
+  nodes[0].selected = true
   characters = init_characters(game)
   game.characters = characters
   game.state = {

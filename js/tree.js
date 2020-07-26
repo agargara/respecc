@@ -154,6 +154,9 @@ export default class Tree{
         'text': {
           'en': '+0.5 🌰 per active node on respec (max 8)'
         },
+        'detail': {
+          'en': 'Gain 0.5 🌰 per active node on respec, up to a maximum of 8 🌰.'
+        },
         'shape': 'fat',
         'area': 'roots',
         'unlocks': [],

@@ -53,6 +53,8 @@ export default class Draw {
       if (!node.hidden && node.link_t==undefined && node.outline_t==undefined)
         this.draw_node_text(node)
     })
+    // draw current node detailed text
+    this.draw_node_detail()
   }
 
   draw_debug(text){
@@ -109,6 +111,34 @@ export default class Draw {
       draw_text(this.ctx, cost, costx+ox, costy, costw+8, this.game, 'center', 1)
     }
   }
+
+  draw_node_detail(){
+    let ctx = this.ctx
+    let game = this.game
+    let node = game.current_node()
+    // draw details
+    if (!(game.options.show_node_details && node.detail))
+      return
+
+    let [x,y] = game.gridpos_to_realpos(node.pos)
+    let w = game.options.node_size[0]
+    let ww = w*GOLD
+    let margin = 12
+    let padding = 16
+    ctx.fillStyle = game.get_color('nodes', 'detailbg')
+    ctx.lineWidth = 4
+    ctx.strokeStyle = game.get_color('nodes', 'detailborder')
+    let text = node.detail[game.options.lang]
+    let lines =  word_wrap(ctx, text, ww-8)
+    let hh = lines.length * 12+padding
+    let xoffset = w*0.5+margin
+    if (node.pos[0] > 0)
+      xoffset = -padding-ww-xoffset
+    draw_round_rect(ctx, x+xoffset, y-hh*0.5-padding*0.5, ww+padding, hh+padding, 16, true, true)
+    ctx.fillStyle = game.get_color('nodes', 'detailtext')
+    draw_text(ctx, node.detail[game.options.lang], x+xoffset+padding*0.5+ww*0.5, y, ww-padding, game, 'center', 20)
+    console.log(text)
+  }
 }
 
 export function draw_text(ctx, text, x, y, max_width, game, text_align='center', max_lines=3){
@@ -156,30 +186,6 @@ export function draw_points(ctx, x, y, points, portion, fill=true, stroke=false)
   if (fill) ctx.fill()
   if (stroke) ctx.stroke()
 }
-
-function draw_node_detail(ctx, game){
-  let node = game.current_node()
-  // draw details
-  if (!(node.selected && game.options.show_node_details && node.detail))
-    return
-
-  let [x,y] = game.gridpos_to_realpos(node.pos)
-  let w = game.options.node_size[0]
-  let ww = w*GOLD
-  let margin = 12
-  let padding = 16
-  ctx.fillStyle = game.get_color('nodes', 'detailbg')
-  ctx.lineWidth = 4
-  ctx.strokeStyle = game.get_color('nodes', 'detailborder')
-  let text = node.detail[game.options.lang]
-  let lines =  word_wrap(ctx, text, ww-8)
-  let hh = lines.length * 12+padding
-  draw_round_rect(ctx, x+w*0.5+margin, y-hh*0.5-padding*0.5, ww+padding, hh+padding, 16, true, true)
-  ctx.fillStyle = game.get_color('nodes', 'detailtext')
-  draw_text(ctx, node.detail[game.options.lang], x+w*0.5+margin+padding*0.5+ww*0.5, y, ww-padding, game, 'center', 20)
-}
-
-
 
 /**
  * Draws a portion of a quadratic curve
