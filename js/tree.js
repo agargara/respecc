@@ -274,6 +274,34 @@ export default class Tree{
           game.current_character().resources.sp.amount += 10
         },
       }),
+      '18': new Node(game, this, {
+        'pos': [ -5, -5 ],
+        'cost': 9007199254740992,
+        'text': {
+          'en': 'ａｓｃｅｎｄ'
+        },
+        'area': 'zebraspace',
+        'unlocks': [],
+        'onactivate': function(game){
+          game.current_character().resources.forEach((res)=>{
+            res.amount = 9007199254740992
+          })
+        },
+      }),
+      '19': new Node(game, this, {
+        'pos': [ 5, 5 ],
+        'cost': -9007199254740992,
+        'text': {
+          'en': 'ｄｅｓｃｅｎｄ'
+        },
+        'area': 'zebraspace',
+        'unlocks': [],
+        'onactivate': function(game){
+          game.current_character().resources.forEach((res)=>{
+            res.amount = -9007199254740992
+          })
+        },
+      }),
     }
     // Add id & neighbor information to nodes
     Object.entries(nodes).forEach(([id, node])=>{

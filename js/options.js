@@ -12,6 +12,7 @@ export let options = {
   'node_distance': [146, 90],
   'node_text_margin': 24,
   'node_font_size': 12,
+  'selected_stroke_width': 8,
   'autopan': true,
   'autopan_margin': 0.5,
   'show_node_details': true,

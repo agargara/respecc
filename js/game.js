@@ -1,8 +1,7 @@
 /* TODO
   HIGH
-  try drawing text on main canvas?
-    add more nodes
-  reimplement draw_node_detail
+  weird bug saving/loading wrong current node
+  add more nodes
 
   MEDIUM
   switching characters
