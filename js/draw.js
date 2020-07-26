@@ -113,31 +113,52 @@ export default class Draw {
   }
 
   draw_node_detail(){
-    let ctx = this.ctx
+
     let game = this.game
     let node = game.current_node()
     // draw details
     if (!(game.options.show_node_details && node.detail))
       return
-
+    let ctx = this.ctx
     let [x,y] = game.gridpos_to_realpos(node.pos)
     let w = game.options.node_size[0]
     let ww = w*GOLD
     let margin = 12
     let padding = 16
-    ctx.fillStyle = game.get_color('nodes', 'detailbg')
-    ctx.lineWidth = 4
-    ctx.strokeStyle = game.get_color('nodes', 'detailborder')
     let text = node.detail[game.options.lang]
     let lines =  word_wrap(ctx, text, ww-8)
     let hh = lines.length * 12+padding
     let xoffset = w*0.5+margin
-    if (node.pos[0] > 0)
+    let triw = -margin
+    let trioffset = w*0.5+margin+2
+    if (node.pos[0] > 0){
       xoffset = -padding-ww-xoffset
-    draw_round_rect(ctx, x+xoffset, y-hh*0.5-padding*0.5, ww+padding, hh+padding, 16, true, true)
+      triw = -triw
+      trioffset = -trioffset
+    }
+
+    // 1. draw outline
+    ctx.fillStyle = game.get_color('nodes', 'detailbg')
+    ctx.lineWidth = 6
+    ctx.strokeStyle = game.get_color('nodes', 'detailborder')
+    draw_round_rect(ctx, x+xoffset, y-hh*0.5-padding*0.5, ww+padding, hh+padding, 16, false, true)
+    // 2. draw triangle arrow
+    this.draw_tri(x+trioffset,y,triw)
+    // 3. draw fill
+    draw_round_rect(ctx, x+xoffset, y-hh*0.5-padding*0.5, ww+padding, hh+padding, 16, true, false)
+    // 4. draw text
     ctx.fillStyle = game.get_color('nodes', 'detailtext')
     draw_text(ctx, node.detail[game.options.lang], x+xoffset+padding*0.5+ww*0.5, y, ww-padding, game, 'center', 20)
-    console.log(text)
+  }
+
+  draw_tri(x,y,w){
+    this.ctx.beginPath()
+    this.ctx.moveTo(x, y-w*0.5)
+    this.ctx.lineTo(x+w, y)
+    this.ctx.lineTo(x, y+w*0.5)
+    this.ctx.closePath()
+    this.ctx.stroke()
+    this.ctx.fill()
   }
 }
 
