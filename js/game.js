@@ -1,27 +1,9 @@
 /* TODO
   HIGH
-  test if performance suffers with 100 nodes
-  spoilers: it does
-
-  optimization:
-
-  render entire tree ONCE to an offscreen canvas
-  only re-render parts of the tree as needed
-
-
-  https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas
-    nodes draw themselves
-    init node: draw the node once, subsequent draws simply blit
-
-    off screen canvas:
-    myCanvas.offscreenCanvas = document.createElement('canvas');
-myCanvas.offscreenCanvas.width = myCanvas.width;
-myCanvas.offscreenCanvas.height = myCanvas.height;
-
-myCanvas.getContext('2d').drawImage(myCanvas.offScreenCanvas, 0, 0);
-especially text rendering should only happen once
-redraw only when color changes
-in fact we should only need to draw nodes once?
+  fix save/load
+  fix animations which happen on respec
+  (disallow respec during animations?)
+  try drawing text on main canvas?
 
   MEDIUM
   switching characters
@@ -73,8 +55,8 @@ var characters
 var game = {}
 window.game = game // allow console access for easy debugging TODO delete this?
 game.options={
-  'autosave': true,
-  'autosave_interval': 60000,
+  'autosave': false,
+  'autosave_interval': 5000,
   'click_margin': 16,
   'zoom_min': 0.5, // TODO change min zoom based on amount of tree revealed
   'zoom_default': 1,
@@ -233,6 +215,8 @@ function save(){
       'current_node': chara.current_node,
       'pos': chara.pos,
       'reachable_nodes': chara.reachable_nodes,
+      'activated_nodes': chara.activated_nodes,
+      'resources': chara.resources,
     }
   })
 
@@ -248,6 +232,7 @@ game.current_character = current_character
 
 function respec(){
   game.dontsave = true
+  game.animate.cancel_animations()
   let h = game.hide_hint['respec']
   if (h) h()
   // run pre-respec functions

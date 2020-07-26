@@ -2,6 +2,18 @@ export default class Animate{
   constructor(game){
     this.game = game
     this.animations = []
+    this.cancel_functions = []
+  }
+
+  cancel_animations(){
+    this.animations.forEach((anim)=>{
+      clearInterval(anim)
+    })
+    this.cancel_functions.forEach((func)=>{
+      func()
+    })
+    this.animations = []
+    this.cancel_functions = []
   }
 
   // gradually reveal a new node
@@ -32,6 +44,11 @@ export default class Animate{
         this.game.nodes_to_redraw.add(target)
       }, 17)
       this.animations.push(interval)
+      this.cancel_functions.push(()=>{
+        target.outline_t = undefined
+        target.link_t = undefined
+        reject()
+      })
     })
   }
 }

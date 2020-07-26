@@ -367,6 +367,7 @@ export default class Tree{
   }
 
   draw_node(node){
+    if (node.hidden) return
     // determine upon which canvas to draw
     let [i,j,x,y] = this.grid_to_treepos(node.pos)
     let canvas = this.canvases[i][j]
