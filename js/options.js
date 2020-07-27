@@ -1,6 +1,6 @@
 export let options = {
   'autosave': true,
-  'autosave_interval': 3000,
+  'autosave_interval': 10000,
   'click_margin': 16,
   'zoom_min': 0.5, // TODO change min zoom based on amount of tree revealed
   'zoom_default': 1,

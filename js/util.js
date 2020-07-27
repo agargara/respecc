@@ -127,17 +127,22 @@ export function hit_circle(x1, y1, x2, y2, r){
 }
 
 export function get_display_transform(ctx, canvas, mouse, options){
+  let [initx, inity] = [-canvas.width*0.5, -canvas.height*0.5]
+  if (options.initx)
+    initx += options.initx
+  if (options.inity)
+    inity += options.inity
   return {
     zoom_min: options.zoom_min,
     zoom_max: options.zoom_max,
-    x:-canvas.width/2,
-    y:-canvas.height/2,
+    x:initx,
+    y:inity,
     ox:0,
     oy:0,
     scale:options.zoom_default,
     rotate:0,
-    cx:-canvas.width/2,
-    cy:-canvas.height/2,
+    cx:initx,
+    cy:inity,
     cox:0,
     coy:0,
     cscale:options.zoom_default,

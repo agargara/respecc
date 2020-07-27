@@ -1,5 +1,3 @@
-const GOLD = 1.618033989
-
 export default class Draw {
   constructor(game){
     this.game = game
@@ -40,11 +38,11 @@ export default class Draw {
   }
 
   draw_tree(){
+    let offset = this.game.tree.offset
     for (let i=0; i<this.game.tree.canvases.length; i++){
       let row = this.game.tree.canvases[i]
       for(let j=0; j<row.length; j++){
         let c = row[j]
-        let offset = this.game.tree.canvas_offsets[i][j]
         this.ctx.drawImage(c, offset[0],offset[1])
       }
     }
@@ -122,7 +120,7 @@ export default class Draw {
     let ctx = this.ctx
     let [x,y] = game.gridpos_to_realpos(node.pos)
     let w = game.options.node_size[0]
-    let ww = w*GOLD
+    let ww = w*2
     let margin = 12
     let padding = 16
     let text = node.detail[game.options.lang]

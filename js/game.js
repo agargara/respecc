@@ -1,13 +1,12 @@
 /* TODO
   HIGH
-  weird bug saving/loading wrong current node
   add more nodes
-
-  MEDIUM
+  improve conversion rate ability
   switching characters
     - set node statuses based on character
-  level up mechanic
 
+  MEDIUM
+  level up mechanic
   more cool looking node shapes
   use own icons instead of emojis
     https://codepen.io/Matnard/pen/mAlEJ
@@ -101,6 +100,16 @@ function init(){
   load() // load save data
   update_hud()
   update_conversion()
+  // get display transform to handle zoom and pan
+  let [initx,inity] = game.gridpos_to_realpos(current_character().pos)
+  let opt = {
+    'zoom_min': game.options.zoom_min,
+    'zoom_max': game.options.zoom_max,
+    'zoom_default': game.options.zoom_default,
+    'initx': initx,
+    'inity': inity
+  }
+  game.display_transform = get_display_transform(ctx, canvas, mouse, opt)
   // draw tree
   game.tree.draw()
   game.animate = new Animate(game)
@@ -134,13 +143,6 @@ function init_game(){
   game.canvas = canvas
   game.ctx = ctx
   resize() // resize canvas based on viewport
-  // get display transform to handle zoom and pan
-  let opt = {
-    'zoom_min': game.options.zoom_min,
-    'zoom_max': game.options.zoom_max,
-    'zoom_default': game.options.zoom_default
-  }
-  game.display_transform = get_display_transform(ctx, canvas, mouse, opt)
 }
 
 // convert svg paths to point arrays
@@ -232,7 +234,7 @@ function save(){
       'resources': chara.resources,
     }
   })
-
+  console.log(save)
   localStorage.setItem('save',JSON.stringify(save))
   game.dontsave = false
   setTimeout(()=>{update_status('save', 'saved', true)}, 1000)
