@@ -16,18 +16,17 @@
     <canvas id="game_screen">
     </canvas>
   </div>
-  <div id="resources" class="menu tab hidden">
-    <div id="resource_list"></div>
+  <div id="character" class="menu tab hidden">
+    <div id='chara_info'></div>
+    <div id="chara_resources"><h3>Resources</h3><div id="resource_list"></div></div>
     <div id="resource_conversion" class="hidden">
       <button id="btn_convert" class="btn_standard">Convert</button>
-      <input type='number' id='num_convert_a' min='1' value='1'>
+      <input type='number' id='num_convert_a' min='1' step='1' value='1'>
       <select name="convert_res_a" id="convert_res_a">
-        <option value="figs">🍊</option>
       </select>
        to
-      <input type='number' id='num_convert_b' min='0' value='' readonly>
+      <input type='number' id='num_convert_b' min='0' step='1' value='' readonly>
       <select name="convert_res_b" id="convert_res_b">
-        <option value="sp">🌰</option>
       </select>
       <div id='conversion_error'></div>
     </div>
@@ -37,7 +36,7 @@
   </div>
   <div id="navigation">
     <div id="nav-tree" class="selected">Tree</div>
-    <div id="nav-resources">Resources</div>
+    <div id="nav-character">Character</div>
     <div id="nav-options">Options</div>
     <div id="btn_reset">Delete save</div>
     <div id="btn_cheat">Cheat</div>

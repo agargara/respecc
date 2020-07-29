@@ -1,11 +1,13 @@
 /* TODO
   HIGH
-  add more nodes
+  put resource conversion code in Character
   improve conversion rate ability
+  only allow integer conversion
   switching characters
     - set node statuses based on character
 
   MEDIUM
+  more nodes!
   level up mechanic
   more cool looking node shapes
   use own icons instead of emojis
@@ -40,7 +42,7 @@
     },
 */
 
-import {clearelem, get, load_image, deep_merge, deep_copy, hit_circle, get_display_transform} from './util.js'
+import {clearelem, get, load_image, deep_copy, deep_merge, hit_circle, get_display_transform} from './util.js'
 import Draw from './draw.js'
 import Tree from './tree.js'
 import Animate from './animate.js'
@@ -48,15 +50,10 @@ import {init_characters} from './characters.js'
 import {get_string} from './strings.js'
 import {options} from './options.js'
 
+var game = {}
+window.game = game // allow console access for easy debugging
 var nodes
 var characters
-var game = {}
-window.game = game // allow console access for easy debugging TODO delete this?
-game.options=options
-game.dontsave = true // disallow saving until game is loaded
-game.images = {}
-game.hide_hint = {}
-game.onrespec = {'pre':[]}
 var canvas, ctx            // canvas and drawing context
 var vw, vh                 // viewport height/width
 var keys_pressed = {}
@@ -75,6 +72,7 @@ window.onload = function(){
 }
 
 function load_assets(){
+  game.images = {}
   document.getElementById('loading_overlay').classList.remove('hidden')
   const promises = [
     get('resources/nodes.svg', 'svg'),
@@ -99,7 +97,6 @@ function init(){
   init_hints()
   load() // load save data
   update_hud()
-  update_conversion()
   // get display transform to handle zoom and pan
   let [initx,inity] = game.gridpos_to_realpos(current_character().pos)
   let opt = {
@@ -128,7 +125,15 @@ function init(){
 }
 
 function init_game(){
+  game.dontsave = true // disallow saving until game is loaded
+  game.options=options
   game.unlocks = {}
+  game.hide_hint = {}
+  game.onrespec = {'pre':[]}
+  game.seasons = ['Evernal', 'Vernal', 'Estival', 'Serotinal', 'Autumnal', 'Hibernal']
+  game.current_season = 2
+
+  // Initialize tree
   game.tree = new Tree(game)
   nodes = game.tree.nodes
   game.nodes = nodes
@@ -198,7 +203,9 @@ function load(){
     )
     game.options = save.options
     deep_merge(save.nodes, game.nodes)
-    deep_merge(save.characters, characters)
+    Object.entries(save.characters).forEach(([key, value])=>{
+      Object.assign(characters[key], value)
+    })
     Object.values(characters).forEach((chara)=>{
       chara.reactivate_nodes()
     })
@@ -232,9 +239,9 @@ function save(){
       'reachable_nodes': chara.reachable_nodes,
       'nodes_to_activate': Array.from(chara.activated_nodes.keys()),
       'resources': chara.resources,
+      'abilities': chara.abilities,
     }
   })
-  console.log(save)
   localStorage.setItem('save',JSON.stringify(save))
   game.dontsave = false
   setTimeout(()=>{update_status('save', 'saved', true)}, 1000)
@@ -269,11 +276,7 @@ function respec(){
 
 game.unlock = function(feature){
   game.unlocks[feature] = true
-  if (feature === 'figtosp') {
-    document.getElementById('resource_conversion').classList.remove('hidden')
-  }
 }
-
 
 /*
   [NODE] node manipulation
@@ -356,6 +359,7 @@ function init_listeners(){
   document.getElementById('num_convert_a').addEventListener('input', ()=>{
     update_conversion()
   })
+  document.getElementById('convert_res_a').addEventListener('change', update_conversion_options)
   // listen for keyboard events
   document.addEventListener('keydown', function (e) {
     keys_pressed[e.key.toLowerCase()] = true
@@ -544,6 +548,8 @@ function open_tab(tab_id, nav){
     tab.classList.remove('selected')
   })
   nav.classList.add('selected')
+  if (tab_id == 'character')
+    update_character_tab()
 }
 
 function update_status(category, status, fade=true){
@@ -567,26 +573,116 @@ function update_hud(){
   let resource_list = document.getElementById('resource_list')
   clearelem(resource_list)
 
+  // season info
+  let s = game.seasons[game.current_season]
+  let seasonelem = document.createElement('span')
+  seasonelem.classList.add('hud_season')
+  seasonelem.innerHTML = 'Season: <span class="'+s+'">'+s+'</span>'
+
   // current character info
   let c = current_character()
-  let charhtml = '<img class="portrait pixelated" src="'+c.portrait+'"> Level '+c.level+' '+c.classy
+  let charelem = document.createElement('span')
+  charelem.classList.add('hud_character')
+  charelem.innerHTML = '<img class="portrait pixelated" src="'+c.portrait+'"> Level '+c.level+' '+c.classy
 
   // resource list
-  let reshtml = ''
+  let reselem = document.createElement('span')
+  reselem.classList.add('hud_resources')
   Object.values(current_character().resources).forEach((r) => {
     if (r.amount > 0) r.show=true
     if (r.show){
-      let str = r.name+': '+r.amount
+      let amt = +r.amount.toFixed(2)
+      let str = r.name+' '+amt
       // add to resources page
       let elem = document.createElement('div')
       elem.innerHTML = str
       resource_list.appendChild(elem)
-      reshtml += str+' '
+      reselem.innerHTML += str+' '
     }
   })
   let hudspan = document.createElement('span')
-  hudspan.innerHTML = charhtml+'　　　'+reshtml
+  hudspan.appendChild(charelem)
+  hudspan.appendChild(reselem)
+  hudspan.appendChild(seasonelem)
   hud.appendChild(hudspan)
+}
+game.update_hud = update_hud
+
+// Update the character info tab
+function update_character_tab(){
+  let c = current_character()
+  let charelem = document.createElement('h2')
+  charelem.classList.add('character_info')
+  charelem.innerHTML = '<img class="portrait_large pixelated" src="'+c.portrait+'">Level '+c.level+' '+c.classy
+  let info = document.getElementById('chara_info')
+  clearelem(info)
+  info.appendChild(charelem)
+
+  // Show resource conversion menu if ability is unlocked
+  if (c.abilities['convert']){
+    document.getElementById('resource_conversion').classList.remove('hidden')
+    add_conversion_options(c.abilities['convert'])
+  }else{
+    document.getElementById('resource_conversion').classList.add('hidden')
+  }
+}
+
+function add_conversion_options(conversions){
+  let select_a = document.getElementById('convert_res_a')
+  clearelem(select_a)
+  Object.keys(conversions).forEach((key)=>{
+    let opt = document.createElement('option')
+    opt.setAttribute('value', key)
+    opt.innerHTML = current_character().resources[key].name
+    select_a.appendChild(opt)
+  })
+  select_a.selectedIndex = 0
+  update_conversion_options()
+}
+
+// Update conversion options based on selected resource
+function update_conversion_options(){
+  let select_a = document.getElementById('convert_res_a')
+  let select_b = document.getElementById('convert_res_b')
+  clearelem(select_b)
+  let res_a = select_a.options[select_a.selectedIndex].value
+  let options = current_character().abilities.convert[res_a]
+  Object.keys(options).forEach((key)=>{
+    let opt = document.createElement('option')
+    opt.setAttribute('value', key)
+    opt.innerHTML = current_character().resources[key].name
+    select_b.appendChild(opt)
+  })
+  select_b.selectedIndex = 0
+  let min_value = current_character().resources[select_b.options[0].value].value
+  document.getElementById('num_convert_a').value = min_value
+  document.getElementById('num_convert_a').setAttribute('step', min_value)
+  update_conversion()
+}
+
+function update_conversion(){
+  let result = convert_resources()
+  if (result === null || result === undefined)
+    result = ''
+  if (result) result = result.toFixed(2)
+  document.getElementById('num_convert_b').value = result
+}
+
+function convert_resources(do_conversion=false){
+  document.getElementById('conversion_error').innerHTML = ''
+  let a = document.getElementById('convert_res_a')
+  a = a.options[a.selectedIndex].value
+  let b = document.getElementById('convert_res_b')
+  b = b.options[b.selectedIndex].value
+  let num = document.getElementById('num_convert_a').value
+  if (num<=0) return ''
+  let result = ''
+  try{
+    result = current_character().convert_resources(a, b, num, do_conversion)
+  }catch(err){
+    document.getElementById('conversion_error').innerHTML = err
+  }
+  return result
 }
 
 // Display hint text
@@ -649,40 +745,6 @@ game.autopan = function(){
     // pan up
     dt.y = (h*m-h+y+dt.coy)/mat[0]
   }
-}
-
-// update conversion ui based on conversion rates and selected currencies
-function update_conversion(){
-  let result = convert_resources()
-  if (result)
-    document.getElementById('num_convert_b').value = result
-  else
-    document.getElementById('num_convert_b').value = ''
-}
-
-// TODO move this into Character?
-function convert_resources(do_conversion=false){
-  let a = document.getElementById('convert_res_a')
-  a = a.options[a.selectedIndex].value
-  let b = document.getElementById('convert_res_b')
-  b = b.options[b.selectedIndex].value
-  let num = document.getElementById('num_convert_a').value
-  if (num<=0) return
-  let res = current_character().resources
-  let val_a = res[a].value
-  let val_b = res[b].value
-  let result = (num * val_a)/val_b
-  if(do_conversion){
-    if (res[a].amount < num){
-      document.getElementById('conversion_error').innerHTML='Insufficient '+res[a].name+' for conversion'
-    }else{
-      document.getElementById('conversion_error').innerHTML=''
-      res[a].amount -= num
-      res[b].amount += result
-      update_hud()
-    }
-  }
-  return result
 }
 
 // get color from theme, return default if not found

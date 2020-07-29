@@ -68,13 +68,17 @@ export function load_image (url) {
 
 // [optimize] this could create recursion hell...
 // copy elements of a into b
-export function deep_merge(a, b){
-  if (!isobj(a) || !isobj(b))
-    return
+export function deep_merge(a, b, c=0){
+  if (c > 8)
+    throw ('you tried to merge too deep :( '+a)
+  c++
+  if (!isobj(a))
+    return c
   Object.entries(a).forEach(([k, v]) => {
     if (isobj(v)){
-      if (isobj(b[k]))
-        deep_merge(v, b[k])
+      if (!isobj(b[k]))
+        b[k] = {}
+      deep_merge(v, b[k], c)
     }else{
       b[k] = v
     }

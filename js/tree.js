@@ -49,7 +49,7 @@ export default class Tree{
           'en': '+1 🌰\non respec'
         },
         'area': 'trunk',
-        'unlocks': [ 4, 6 ],
+        'unlocks': [ 4, 'worms01' ],
         'onactivate': function(game){
           game.current_character().onrespec.resources.sp += 1
         }
@@ -114,13 +114,13 @@ export default class Tree{
           'en': 'unlock\n🍊→🌰'
         },
         'detail': {
-          'en': 'Unlock the ability to convert 🍊 to 🌰. Starting rate is 1🍊→2🌰.'
+          'en': 'Unlock the ability to convert 🍊 to 🌰. Starting rate is 1🍊→2🌰. Conversion is available in the Character tab.'
         },
         'area': 'figs',
         'shape': 'lump',
         'unlocks': ['figs09'],
         'onactivate': function(game){
-          game.unlock('figtosp')
+          game.current_character().unlock('convert figs sp')
         }
       }),
       'figs03': new Node(game, this, {
@@ -201,7 +201,7 @@ export default class Tree{
         },
         'area': 'figs',
         'shape': 'lump',
-        'unlocks': [],
+        'unlocks': ['figs14'],
         'onactivate': function(game){
           game.current_character().resources.figs.amount += 4
         }
@@ -248,7 +248,7 @@ export default class Tree{
         }
       }),
       'figs12': new Node(game, this, {
-        'pos': [ 2, -5 ],
+        'pos': [ 2, -4 ],
         'cost': 10,
         'text': {
           'en': '+1 🍊\n(permanent)'
@@ -278,7 +278,23 @@ export default class Tree{
           game.current_character().onrespec.resources.figs += 5
         }
       }),
-      '6': new Node(game, this, {
+      'figs14': new Node(game, this, {
+        'pos': [ 1, -9 ],
+        'cost': 20,
+        'text': {
+          'en': '🍊→🌰 discount'
+        },
+        'detail': {
+          'en': '🌰 cost of overground nodes is reduced by 0.2 per 🍊. (Maximum discount: 50%)'
+        },
+        'area': 'figs',
+        'shape': 'lump',
+        'unlocks': [],
+        'onactivate': function(game){
+          game.current_character().unlock('figspdiscount')
+        }
+      }),
+      'worms01': new Node(game, this, {
         'pos': [ 1, 2 ],
         'cost': 2,
         'text': {
@@ -287,11 +303,81 @@ export default class Tree{
         'area': 'worms',
         'shape': 'wiggly',
         'unlocks': [
-          12,
-          14
+          'worms02'
         ],
         'onactivate': function(game){
           game.current_character().resources.worms.amount += 1
+        }
+      }),
+      'worms02': new Node(game, this, {
+        'pos': [ 1, 3 ],
+        'cost': 4,
+        'text': {
+          'en': '+2 🐛'
+        },
+        'area': 'worms',
+        'shape': 'wiggly',
+        'unlocks': ['worms03'],
+        'onactivate': function(game){
+          game.current_character().resources.worms.amount += 2
+        }
+      }),
+      'worms03': new Node(game, this, {
+        'pos': [ 1, 4 ],
+        'cost': 6,
+        'text': {
+          'en': '+3 🐛'
+        },
+        'area': 'worms',
+        'shape': 'wiggly',
+        'unlocks': ['worms04'],
+        'onactivate': function(game){
+          game.current_character().resources.worms.amount += 3
+        }
+      }),
+      'worms04': new Node(game, this, {
+        'pos': [ 1, 5 ],
+        'cost': 8,
+        'text': {
+          'en': '+4 🐛'
+        },
+        'area': 'worms',
+        'shape': 'wiggly',
+        'unlocks': ['worms05', 'worms06'],
+        'onactivate': function(game){
+          game.current_character().resources.worms.amount += 4
+        }
+      }),
+      'worms05': new Node(game, this, {
+        'pos': [ 0, 6 ],
+        'cost': 10,
+        'text': {
+          'en': '🐛→🌰 discount'
+        },
+        'detail': {
+          'en': '🌰 cost of underground nodes is reduced by 0.2 per 🐛. (Maximum discount: 50%)'
+        },
+        'area': 'worms',
+        'shape': 'wiggly',
+        'unlocks': [],
+        'onactivate': function(game){
+          game.current_character().unlock('wormspdiscount')
+        }
+      }),
+      'worms06': new Node(game, this, {
+        'pos': [ 2, 6 ],
+        'cost': 10,
+        'text': {
+          'en': 'unlock\n🌰→🐛'
+        },
+        'detail': {
+          'en': 'Unlock the ability to convert 🌰 to 🐛. Starting rate is 5🌰→1🐛. Conversion is available under the Character tab.'
+        },
+        'area': 'worms',
+        'shape': 'wiggly',
+        'unlocks': [],
+        'onactivate': function(game){
+          game.current_character().unlock('convert sp worms')
         }
       }),
       '7': new Node(game, this, {
@@ -352,35 +438,6 @@ export default class Tree{
               game.current_character().onrespec.resources.sp += amount
             }
           )
-        }
-      }),
-      '12': new Node(game, this, {
-        'pos': [ 1, 3 ],
-        'cost': 4,
-        'text': {
-          'en': '+2 🐛'
-        },
-        'area': 'worms',
-        'shape': 'wiggly',
-        'unlocks': [],
-        'onactivate': function(game){
-          game.current_character().resources.worms.amount += 2
-        }
-      }),
-      '14': new Node(game, this, {
-        'pos': [ 2, 3 ],
-        'cost': 4,
-        'text': {
-          'en': '🐛→🌰 discount'
-        },
-        'detail': {
-          'en': '🌰 cost of underground nodes is reduced by 0.5 per 🐛. (Maximum discount: 50%)'
-        },
-        'area': 'worms',
-        'shape': 'wiggly',
-        'unlocks': [],
-        'onactivate': function(game){
-          game.unlock('wormspdiscount')
         }
       }),
       '15': new Node(game, this, {

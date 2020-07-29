@@ -1,3 +1,4 @@
+/* General */
 body{
   display: flex;
   background: #0a0a0a;
@@ -10,7 +11,6 @@ body{
   padding: 0;
   height: 100%;
 }
-
 .pixelated{
   image-rendering:optimizeSpeed;             /* Legal fallback */
   image-rendering:-moz-crisp-edges;          /* Firefox        */
@@ -21,22 +21,14 @@ body{
   image-rendering:pixelated;                 /* CSS4 Proposed  */
   -ms-interpolation-mode:nearest-neighbor;   /* IE8+           */
 }
-
-img.portrait{
-  outline: 1px solid #F1E7C3;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  top: 10px;
-  left: 1px;
-  position: relative;
-  margin-right: 4px;
-}
-
 .hidden{
   display: none !important;
 }
-
+.fadeout {
+  visibility: hidden;
+  opacity: 0;
+  transition: visibility 0s 2s, opacity 2s linear;
+}
 .center_container{
   display: flex;
   align-items: center;
@@ -48,48 +40,32 @@ img.portrait{
   left: 0;
   top: 0;
 }
+h1, h2, h3, h4 {
+  margin: 0;
+  padding: 0;
+}
 
+/* Main screens */
 .hint{
   font-size: 1.5em;
   top: 25%;
   pointer-events: none;
 }
-
 #loading_overlay{
   background-color: rgb(0,0,0);
 }
-
-#ui{
-  margin-top: 12px;
-}
-
 .tab{
   width: 80vw;
   height: 80vh;
   border: 1px solid #444;
   box-sizing: border-box;
 }
-
 .menu{
   padding: 16px;
   background: #080E07;
 }
 
-#hud{
-  display: flex;
-  width: 80vw;
-  margin-bottom: 12px;
-  justify-content: space-between;
-}
-
-#resources{
-  text-align: left;
-}
-
-#status{
-  text-align: right;
-}
-
+/* Navigation tabs */
 #navigation{
   display: flex;
   align-items: left;
@@ -117,16 +93,70 @@ img.portrait{
   background: #c8ff9c;
 }
 
+/* HUD */
+img.portrait{
+  outline: 1px solid #F1E7C3;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  top: 10px;
+  left: 1px;
+  position: relative;
+  margin-right: 4px;
+}
+#hud{
+  display: flex;
+  width: 80vw;
+  margin-bottom: 12px;
+  justify-content: space-between;
+}
+
+.hud_resources{
+  margin-left: 12px;
+}
+
+.hud_season{
+  margin-left: 12px;
+}
+.estival{
+  color: #9afa4b;
+}
+#status{
+  text-align: right;
+}
+
+/* Character info tab */
+#character{
+  padding-left: 32px;
+}
+#chara_info{
+  margin-bottom: 32px;
+}
+img.portrait_large{
+  outline: 8px solid #F1E7C3;
+  width: 64px;
+  height: 64px;
+  top: 22px;
+  left: 8px;
+  position: relative;
+  padding: 0;
+  margin-right: 32px;
+}
+.character_info{
+  font-size: 24px;
+}
+#chara_resources{
+  border: 1px solid #F1E7C3;
+  padding: 16px;
+}
 #resource_conversion{
   cursor: pointer;
   margin-top: 1em;
 }
-
 #resource_conversion button:hover{
   cursor: pointer;
   background: #e8f5e8;
 }
-
 .btn_standard{
   font-size: 16px;
   padding: 8px;
@@ -139,7 +169,6 @@ img.portrait{
 .btn_standard:active{
   background: #c8ff9c;
 }
-
 input{
   padding:8px;
   width: 100px;
@@ -147,13 +176,6 @@ input{
 select{
   height: 32px;
 }
-
 #num_convert_b{
   background-color: #aaa;
-}
-
-.fadeout {
-  visibility: hidden;
-  opacity: 0;
-  transition: visibility 0s 2s, opacity 2s linear;
 }
