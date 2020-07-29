@@ -146,7 +146,7 @@ class Character {
     let r1 = this.resources[res1]
     let r2 = this.resources[res2]
     if (!r1 || !r2) throw('Invalid resource')
-    if (num != Math.round(num)) throw('Whole number conversions only.')
+    //if (num != Math.round(num)) throw('Whole number conversions only.')
     if (num > r1.amount) throw('Insufficient '+r1.name)
     let result = (num * r1.value) / r2.value
     if (result < 0) throw('Cannot convert to negative resources')

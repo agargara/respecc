@@ -664,7 +664,7 @@ function update_conversion(){
   let result = convert_resources()
   if (result === null || result === undefined)
     result = ''
-  if (result) result = result.toFixed(2)
+  if (result) result = +result.toFixed(2)
   document.getElementById('num_convert_b').value = result
 }
 
