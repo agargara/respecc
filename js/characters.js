@@ -1,5 +1,5 @@
 import {init_resources} from './resources.js'
-import {DefaultDict} from './util.js'
+import {DefaultDict, deep_merge} from './util.js'
 class Character {
   constructor(game, classy, node, color) {
     this.game = game
@@ -18,6 +18,7 @@ class Character {
     this.nodes_to_activate = []
     this.resources = init_resources()
     this.onrespec = {'resources': new DefaultDict(0), 'pre':[]}
+    this.abilities = {}
     this.canvas = document.createElement('canvas')
     this.canvas.height = 32
     this.canvas.width = 32
@@ -33,6 +34,8 @@ class Character {
     this.reachable_nodes = {
       '0': true
     }
+    // reset abilities
+    this.abilities = {}
     // reset resources
     Object.values(this.resources).forEach((res) => {
       res.amount = res.permanent
@@ -107,6 +110,13 @@ class Character {
     )
   }
 
+  // unlock abilities
+  unlock(ability){
+    let keys = ability.split(' ')
+    let abilities = keys.reverse().reduce((res, key) => ({[key]: res}), true)
+    deep_merge(abilities, this.abilities)
+  }
+
   // try to purchase current node
   purchase(){
     let node = this.nodes[this.current_node]
@@ -129,6 +139,23 @@ class Character {
     return (
       !this.activated_nodes.has(nodeid) &&
       this.resources.sp.amount >= node.get_cost())
+  }
+
+  // try to convert resources
+  convert_resources(res1, res2, num, do_conversion=false){
+    let r1 = this.resources[res1]
+    let r2 = this.resources[res2]
+    if (!r1 || !r2) throw('Invalid resource')
+    if (num != Math.round(num)) throw('Whole number conversions only.')
+    if (num > r1.amount) throw('Insufficient '+r1.name)
+    let result = (num * r1.value) / r2.value
+    if (result < 0) throw('Cannot convert to negative resources')
+    if(do_conversion){
+      r1.amount -= num
+      r2.amount += result
+      this.game.update_hud()
+    }
+    return result
   }
 
   get_node_status(nodeid){

@@ -52,8 +52,12 @@ export default class Node {
     // apply discounts
     let discount = 0
     if (this.game === undefined) return cost
-    if (this.game.unlocks.wormspdiscount && this.pos[1] > 0){
-      discount += this.game.current_character().resources.worms.amount*0.5
+    let c = this.game.current_character()
+    if (c.abilities['wormspdiscount'] && this.pos[1] > 0){
+      discount += this.game.current_character().resources.worms.amount*0.2
+    }
+    if (c.abilities['figspdiscount'] && this.pos[1] < 0){
+      discount += this.game.current_character().resources.figs.amount*0.2
     }
     if (discount > cost*0.5)
       discount = cost*0.5
