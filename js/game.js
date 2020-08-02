@@ -1,12 +1,14 @@
 /* TODO
   HIGH
-  refactor code:
-    - when drawing nodes check current character to decide which nodes are active
-  test if performance suffers with 1000 nodes
+  put resource conversion code in Character
+  improve conversion rate ability
+  only allow integer conversion
+  switching characters
+    - set node statuses based on character
 
   MEDIUM
+  more nodes!
   level up mechanic
-  add more nodes
   more cool looking node shapes
   use own icons instead of emojis
     https://codepen.io/Matnard/pen/mAlEJ
@@ -40,53 +42,18 @@
     },
 */
 
-import {clearelem, get, load_image, deep_merge, deep_copy, hit_circle, get_display_transform} from './util.js'
-import {draw_tree} from './draw.js'
-import {init_tree} from './tree.js'
+import {clearelem, get, load_image, deep_copy, deep_merge, hit_circle, get_display_transform} from './util.js'
+import Draw from './draw.js'
+import Tree from './tree.js'
+import Animate from './animate.js'
 import {init_characters} from './characters.js'
 import {get_string} from './strings.js'
+import {options} from './options.js'
 
-const GOLD = 1.618033989
-var tree
-var characters
 var game = {}
-window.game = game // allow console access for easy debugging TODO delete this?
-game.options={
-  'autosave': true,
-  'autosave_interval': 5000,
-  'click_margin': 16,
-  'zoom_min': 0.5,
-  'zoom_max': 1.25,
-  'animation_speed': 1.0, // higher numbers are faster, 0 for off
-  'max_travel_dist': 2,
-  'lang': 'en',
-  'node_size': 64,
-  'node_distance': 90,
-  'node_text_margin': 24,
-  'autopan': true,
-  'autopan_margin': 0.5,
-  'show_node_details': true,
-  'theme': {
-    'default': '#f00',
-    'bgcolor': '#080E07', // rich black
-    'nodes': {
-      'link': '#fff',
-      'link_locked': '#999',
-      'deactivated': '#9a9',
-      'activated': '#fff',
-      'selected': '#8E9B58',
-      'text': '#000',
-      'cost': '#4d7250',
-      'detailbg': '#c2b7e8',
-      'detailborder': '#6b57a5',
-      'detailtext': '#000',
-    }
-  }
-}
-game.dontsave = false
-game.images = {}
-game.hide_hint = {}
-game.onrespec = {'pre':[]}
+window.game = game // allow console access for easy debugging
+var nodes
+var characters
 var canvas, ctx            // canvas and drawing context
 var vw, vh                 // viewport height/width
 var keys_pressed = {}
@@ -105,11 +72,12 @@ window.onload = function(){
 }
 
 function load_assets(){
+  game.images = {}
   document.getElementById('loading_overlay').classList.remove('hidden')
   const promises = [
-    get('./resources/nodes.svg', 'svg'),
-    load_image('./img/characters.png'),
-    load_image('./img/sp.png'),
+    get('resources/nodes.svg', 'svg'),
+    load_image('img/characters.png'),
+    load_image('img/sp.png'),
   ]
   Promise.allSettled(promises).
     then((results) => {
@@ -119,25 +87,67 @@ function load_assets(){
         game.images['characters'] = results[1].value
       if (results[2].status === 'fulfilled')
         game.images['sp'] = results[2].value
-      init_game()
+      init()
     })
 }
 
-function init_game(){
+function init(){
   init_svgs()
-  reset_all()
-  canvas = document.getElementById('game_screen')
-  ctx = canvas.getContext('2d')
-  resize()
+  init_game()
+  init_hints()
   load() // load save data
   update_hud()
-  update_conversion()
+  // get display transform to handle zoom and pan
+  let [initx,inity] = game.gridpos_to_realpos(current_character().pos)
+  let opt = {
+    'zoom_min': game.options.zoom_min,
+    'zoom_max': game.options.zoom_max,
+    'zoom_default': game.options.zoom_default,
+    'initx': initx,
+    'inity': inity
+  }
+  game.display_transform = get_display_transform(ctx, canvas, mouse, opt)
+  // draw tree
+  game.tree.draw()
+  game.animate = new Animate(game)
+  // draw everything
+  game.draw = new Draw(game)
+  // hide the loading screen
+  document.getElementById('loading_overlay').classList.add('hidden')
+  // allow input
+  init_listeners()
+  // start autosave
   if (game.options.autosave){
     game.autosave_timer = setInterval(save, game.options.autosave_interval)
   }
-  init_listeners()
-  document.getElementById('loading_overlay').classList.add('hidden')
-  requestAnimationFrame(draw)
+  // done with init, allow saving
+  game.dontsave = false
+}
+
+function init_game(){
+  game.dontsave = true // disallow saving until game is loaded
+  game.options=options
+  game.unlocks = {}
+  game.hide_hint = {}
+  game.onrespec = {'pre':[]}
+  game.seasons = ['Evernal', 'Vernal', 'Estival', 'Serotinal', 'Autumnal', 'Hibernal']
+  game.current_season = 2
+
+  // Initialize tree
+  game.tree = new Tree(game)
+  nodes = game.tree.nodes
+  game.nodes = nodes
+  nodes[0].selected = true
+  characters = init_characters(game)
+  game.characters = characters
+  game.state = {
+    'current_character': 'arborist'
+  }
+  canvas = document.getElementById('game_screen')
+  ctx = canvas.getContext('2d')
+  game.canvas = canvas
+  game.ctx = ctx
+  resize() // resize canvas based on viewport
 }
 
 // convert svg paths to point arrays
@@ -161,6 +171,23 @@ function path_to_points(path){
   return points
 }
 
+function init_hints(){
+  // display purchase node hint after 5 seconds
+  window.setTimeout(() => {
+    let move_hint = function(){
+      if (current_character().activated_nodes.size == 1 && current_node_id() == 0){
+        // display movement hint if player hasn't moved
+        hint('move')
+      }
+    }
+    if (current_character().activated_nodes.size < 1){
+      hint('purchasenode', move_hint)
+    }else{
+      move_hint()
+    }
+  }, 3000)
+}
+
 /*
   [GAME] core game functions
 */
@@ -175,9 +202,13 @@ function load(){
       }
     )
     game.options = save.options
-
-    deep_merge(save.tree, tree)
-    deep_merge(save.characters, characters)
+    deep_merge(save.nodes, game.nodes)
+    Object.entries(save.characters).forEach(([key, value])=>{
+      Object.assign(characters[key], value)
+    })
+    Object.values(characters).forEach((chara)=>{
+      chara.reactivate_nodes()
+    })
   }
 }
 
@@ -189,16 +220,15 @@ function save(){
     'state': game.state,
     'unlocks': game.unlocks,
     'options': game.options,
-    'tree': {'nodes': {}},
+    'nodes': {},
     'characters': {}
   }
   // save tree node status
-  Object.entries(tree).forEach(([k,node])=>{
-    save.tree[k] = {
-      'status': node.status,
-      'locked': node.locked,
+  Object.entries(nodes).forEach(([k,node])=>{
+    save.nodes[k] = {
       'hidden': node.hidden,
-      'selected': node.selected
+      'selected': node.selected,
+      'status': node.status
     }
   })
   // save relevant info about characters
@@ -207,9 +237,11 @@ function save(){
       'current_node': chara.current_node,
       'pos': chara.pos,
       'reachable_nodes': chara.reachable_nodes,
+      'nodes_to_activate': Array.from(chara.activated_nodes.keys()),
+      'resources': chara.resources,
+      'abilities': chara.abilities,
     }
   })
-
   localStorage.setItem('save',JSON.stringify(save))
   game.dontsave = false
   setTimeout(()=>{update_status('save', 'saved', true)}, 1000)
@@ -222,6 +254,7 @@ game.current_character = current_character
 
 function respec(){
   game.dontsave = true
+  game.animate.cancel_animations()
   let h = game.hide_hint['respec']
   if (h) h()
   // run pre-respec functions
@@ -234,50 +267,15 @@ function respec(){
   Object.values(characters).forEach((char) => {
     char.reset()
   })
-  // reset activated nodes
-  Object.values(tree).forEach(node => {
-    if (!(node.permanent && node.status === 'activated'))
-      node.respec()
-  })
-  tree['0'].locked = false
-  tree['0'].selected = true
   update_hud()
-  game.dontsave = false
-}
-
-function reset_all(){
-  game.dontsave = true
-  tree = init_tree(game)
-  game.tree = tree
-  characters = init_characters(game)
-  game.characters = characters
-  game.unlocks = {}
-  game.state = {
-    'current_character': 'arborist'
-  }
-  tree['0'].locked = false
-  // display purchase node hint after 5 seconds
-  window.setTimeout(() => {
-    let move_hint = function(){
-      if (current_node_id() == 0 && tree['1'].status != 'activated' && tree['2'].status != 'activated'){
-        // display movement hint if player hasn't moved
-        hint('move')
-      }
-    }
-    if (current_node_id() == 0 && tree['0'].status != 'activated'){
-      hint('purchasenode', move_hint)
-    }else{
-      move_hint()
-    }
-  }, 3000)
+  // redraw tree
+  game.tree.clear()
+  game.tree.draw()
   game.dontsave = false
 }
 
 game.unlock = function(feature){
   game.unlocks[feature] = true
-  if (feature === 'figtosp') {
-    document.getElementById('resource_conversion').classList.remove('hidden')
-  }
 }
 
 /*
@@ -287,33 +285,35 @@ function current_node_id(){
   return current_character()['current_node']
 }
 game.current_node = ()=>{
-  return tree[current_node_id()]
+  return nodes[current_node_id()]
 }
 
 function unlock_neighbors(node){
   let r = current_character().reachable_nodes
   node.unlocks.forEach((id) => {
-    r[id] = true
-    if (game.options.animation_speed <= 0 || !tree[id].hidden){
-      tree[id].locked = false
-      tree[id].hidden = false
+    if (!nodes.hasOwnProperty(id)) return
+    let neighbor = nodes[id]
+    if (game.options.animation_speed <= 0 || !neighbor.hidden){
+      neighbor.hidden = false
+      r[id] = true
     }else{
-      tree[id].link_t = 0
-      tree[id].outline_t = 0
+      game.animate.reveal_node(node, neighbor).then(()=>{
+        r[id] = true
+      }, ()=>{})
     }
   })
 }
 // check if x, y is within node
 function hit_node(x, y, node){
   let pos = game.gridpos_to_realpos(node.pos)
-  return hit_circle(x, y, pos[0], pos[1], game.options.node_size)
+  return hit_circle(x, y, pos[0], pos[1], game.options.node_size[0]*0.5)
 }
 // convert grid position to real position
 game.gridpos_to_realpos = function(gridpos){
   let d = game.options.node_distance
   return [
-    gridpos[0] * d * GOLD,
-    gridpos[1] * d
+    gridpos[0] * d[0],
+    gridpos[1] * d[1]
   ]
 }
 game.purchase_node = function(node){
@@ -322,9 +322,10 @@ game.purchase_node = function(node){
   if (h) h()
   // run activate function
   if (typeof node.onactivate === 'function') node.onactivate(game)
-  node.status = 'activated'
   unlock_neighbors(node)
   update_hud()
+  // redraw node
+  game.tree.nodes_to_redraw.add(node)
 }
 
 /*
@@ -333,11 +334,11 @@ game.purchase_node = function(node){
 function init_listeners(){
   window.addEventListener('resize', resize)
   // navigation buttons
-  Array.from(document.getElementById('navigation').children).forEach((node)=>{
-    if (!node.id || !node.id.startsWith('nav-')) return
-    let tab_id = node.id.replace('nav-', '')
-    node.addEventListener('click', ()=>{
-      open_tab(tab_id, node)
+  Array.from(document.getElementById('navigation').children).forEach((btn)=>{
+    if (!btn.id || !btn.id.startsWith('nav-')) return
+    let tab_id = btn.id.replace('nav-', '')
+    btn.addEventListener('click', ()=>{
+      open_tab(tab_id, btn)
     })
   })
   // button events
@@ -345,10 +346,8 @@ function init_listeners(){
     convert_resources(true)
   })
   document.getElementById('btn_reset').addEventListener('click', ()=>{
-    // TODO delete save is for debug purposes only
-    update_status('resetting all')
     localStorage.removeItem('save')
-    reset_all
+    location.reload()
   })
   document.getElementById('btn_cheat').addEventListener('click', ()=>{
     Object.values(current_character().resources).forEach((res)=>{
@@ -360,19 +359,17 @@ function init_listeners(){
   document.getElementById('num_convert_a').addEventListener('input', ()=>{
     update_conversion()
   })
-
-  // get display transform to handle zoom and pan
-  game.display_transform = get_display_transform(ctx, canvas, mouse)
+  document.getElementById('convert_res_a').addEventListener('change', update_conversion_options)
   // listen for keyboard events
   document.addEventListener('keydown', function (e) {
-    keys_pressed[e.key] = true
+    keys_pressed[e.key.toLowerCase()] = true
     handle_keyboard_input()
   })
   document.addEventListener('keyup', function (e) {
     if (e.key == ' '){
       e.preventDefault()
     }
-    keys_pressed[e.key] = false
+    keys_pressed[e.key.toLowerCase()] = false
   })
   // listen for mouse events on canvas
   canvas.addEventListener('mousemove', mouse_move)
@@ -407,21 +404,21 @@ function handle_keyboard_input(){
 function handle_movement(){
   // determine angle based on combination of wasd
   let dx = 0, dy = 0
-  if (keys_pressed.w || keys_pressed.ArrowUp){
+  if (keys_pressed.w || keys_pressed.urrowup){
     dy += -1
-    keys_pressed.w = keys_pressed.ArrowUp = false
+    keys_pressed.w = keys_pressed.arrowup = false
   }
-  if (keys_pressed.s || keys_pressed.ArrowDown){
+  if (keys_pressed.s || keys_pressed.arrowdown){
     dy += 1
-    keys_pressed.s = keys_pressed.ArrowDown = false
+    keys_pressed.s = keys_pressed.arrowdown = false
   }
-  if (keys_pressed.a || keys_pressed.ArrowLeft){
+  if (keys_pressed.a || keys_pressed.arrowleft){
     dx += -1
-    keys_pressed.a = keys_pressed.ArrowLeft = false
+    keys_pressed.a = keys_pressed.arrowleft = false
   }
-  if (keys_pressed.d || keys_pressed.ArrowRight){
+  if (keys_pressed.d || keys_pressed.arrowright){
     dx += 1
-    keys_pressed.d = keys_pressed.ArrowRight = false
+    keys_pressed.d = keys_pressed.arrowright = false
   }
   if (dy == 0 && dx == 0) return
   let angle = Math.atan2(dy, dx)
@@ -432,9 +429,9 @@ function handle_movement(){
   let closest_distance = 9999
   let closest_angle = 10
   let closest_node_id = null
-  Object.entries(tree).forEach(([k,node]) => {
-    // skip hidden and locked
-    if (node.hidden || node.locked) return
+  Object.entries(nodes).forEach(([k,node]) => {
+    // skip hidden and unreachable
+    if (node.hidden || !node.is_reachable()) return
     dy = node.pos[1] - pos[1]
     dx = node.pos[0] - pos[0]
     // skip current position
@@ -502,10 +499,10 @@ function click_is_close(pos){
 }
 function click(x, y){
   // detect if any node was clicked
-  if (!tree) return
+  if (!nodes) return
   [x,y] = mouse_to_game_coords(x, y)
-  Object.entries(tree).forEach(([id, node]) => {
-    if (!node) return
+  Object.entries(nodes).some(([id, node]) => {
+    if (!node) return false
     if(hit_node(x, y, node)){
       // if current node, purchase it,
       // otherwise move to it
@@ -513,6 +510,7 @@ function click(x, y){
         current_character().purchase()
       else
         current_character().move(id)
+      return true
     }
   })
 }
@@ -528,27 +526,6 @@ function mouse_to_game_coords(x, y){
   x /= mat[0]
   y /= mat[3]
   return [x,y]
-}
-
-/*
-  [DRAW] drawing related functions
-*/
-function draw(){
-  // update the transform
-  game.display_transform.update()
-  // set home transform to clear the screem
-  game.display_transform.setHome()
-  // draw background
-  // [optimize] only redraw necessary parts?
-  ctx.rect(0, 0, canvas.width, canvas.height)
-  ctx.fillStyle = game.options.theme.bgcolor
-  ctx.fill()
-  // draw tree
-  game.display_transform.setTransform()
-  draw_tree(ctx, game)
-  if (game.debugtext)
-    draw_debug_text(ctx, game.debugtext)
-  requestAnimationFrame(draw)
 }
 
 /*
@@ -571,6 +548,8 @@ function open_tab(tab_id, nav){
     tab.classList.remove('selected')
   })
   nav.classList.add('selected')
+  if (tab_id == 'character')
+    update_character_tab()
 }
 
 function update_status(category, status, fade=true){
@@ -587,8 +566,6 @@ function update_status(category, status, fade=true){
   }
 }
 
-
-
 function update_hud(){
   // clear hud and resource list
   let hud = document.getElementById('hud_left')
@@ -596,26 +573,116 @@ function update_hud(){
   let resource_list = document.getElementById('resource_list')
   clearelem(resource_list)
 
+  // season info
+  let s = game.seasons[game.current_season]
+  let seasonelem = document.createElement('span')
+  seasonelem.classList.add('hud_season')
+  seasonelem.innerHTML = 'Season: <span class="'+s+'">'+s+'</span>'
+
   // current character info
   let c = current_character()
-  let charhtml = '<img class="portrait pixelated" src="'+c.img+'"> Level '+c.level+' '+c.classy
+  let charelem = document.createElement('span')
+  charelem.classList.add('hud_character')
+  charelem.innerHTML = '<img class="portrait pixelated" src="'+c.portrait+'"> Level '+c.level+' '+c.classy
 
   // resource list
-  let reshtml = ''
+  let reselem = document.createElement('span')
+  reselem.classList.add('hud_resources')
   Object.values(current_character().resources).forEach((r) => {
     if (r.amount > 0) r.show=true
     if (r.show){
-      let str = r.name+': '+r.amount
+      let amt = +r.amount.toFixed(2)
+      let str = r.name+' '+amt
       // add to resources page
       let elem = document.createElement('div')
       elem.innerHTML = str
       resource_list.appendChild(elem)
-      reshtml += str+' '
+      reselem.innerHTML += str+' '
     }
   })
   let hudspan = document.createElement('span')
-  hudspan.innerHTML = charhtml+'　　　'+reshtml
+  hudspan.appendChild(charelem)
+  hudspan.appendChild(reselem)
+  hudspan.appendChild(seasonelem)
   hud.appendChild(hudspan)
+}
+game.update_hud = update_hud
+
+// Update the character info tab
+function update_character_tab(){
+  let c = current_character()
+  let charelem = document.createElement('h2')
+  charelem.classList.add('character_info')
+  charelem.innerHTML = '<img class="portrait_large pixelated" src="'+c.portrait+'">Level '+c.level+' '+c.classy
+  let info = document.getElementById('chara_info')
+  clearelem(info)
+  info.appendChild(charelem)
+
+  // Show resource conversion menu if ability is unlocked
+  if (c.abilities['convert']){
+    document.getElementById('resource_conversion').classList.remove('hidden')
+    add_conversion_options(c.abilities['convert'])
+  }else{
+    document.getElementById('resource_conversion').classList.add('hidden')
+  }
+}
+
+function add_conversion_options(conversions){
+  let select_a = document.getElementById('convert_res_a')
+  clearelem(select_a)
+  Object.keys(conversions).forEach((key)=>{
+    let opt = document.createElement('option')
+    opt.setAttribute('value', key)
+    opt.innerHTML = current_character().resources[key].name
+    select_a.appendChild(opt)
+  })
+  select_a.selectedIndex = 0
+  update_conversion_options()
+}
+
+// Update conversion options based on selected resource
+function update_conversion_options(){
+  let select_a = document.getElementById('convert_res_a')
+  let select_b = document.getElementById('convert_res_b')
+  clearelem(select_b)
+  let res_a = select_a.options[select_a.selectedIndex].value
+  let options = current_character().abilities.convert[res_a]
+  Object.keys(options).forEach((key)=>{
+    let opt = document.createElement('option')
+    opt.setAttribute('value', key)
+    opt.innerHTML = current_character().resources[key].name
+    select_b.appendChild(opt)
+  })
+  select_b.selectedIndex = 0
+  let min_value = current_character().resources[select_b.options[0].value].value
+  document.getElementById('num_convert_a').value = min_value
+  document.getElementById('num_convert_a').setAttribute('step', min_value)
+  update_conversion()
+}
+
+function update_conversion(){
+  let result = convert_resources()
+  if (result === null || result === undefined)
+    result = ''
+  if (result) result = +result.toFixed(2)
+  document.getElementById('num_convert_b').value = result
+}
+
+function convert_resources(do_conversion=false){
+  document.getElementById('conversion_error').innerHTML = ''
+  let a = document.getElementById('convert_res_a')
+  a = a.options[a.selectedIndex].value
+  let b = document.getElementById('convert_res_b')
+  b = b.options[b.selectedIndex].value
+  let num = document.getElementById('num_convert_a').value
+  if (num<=0) return ''
+  let result = ''
+  try{
+    result = current_character().convert_resources(a, b, num, do_conversion)
+  }catch(err){
+    document.getElementById('conversion_error').innerHTML = err
+  }
+  return result
 }
 
 // Display hint text
@@ -680,48 +747,23 @@ game.autopan = function(){
   }
 }
 
-function draw_debug_text(ctx, text){
-  ctx.fillStyle = '#fff'
-  ctx.textAlign = 'right'
-  ctx.font = '12px sans-serif'
-  let x = canvas.width-12, y = 24
-  let lines = text.split('\n')
-  game.display_transform.setHome()
-  lines.forEach((line, i) => {
-    ctx.fillText(line, x, y+(i*12))
-  })
-}
-
-// update conversion ui based on conversion rates and selected currencies
-function update_conversion(){
-  let result = convert_resources()
-  if (result)
-    document.getElementById('num_convert_b').value = result
-  else
-    document.getElementById('num_convert_b').value = ''
-}
-
-// TODO move this into Character?
-function convert_resources(do_conversion=false){
-  let a = document.getElementById('convert_res_a')
-  a = a.options[a.selectedIndex].value
-  let b = document.getElementById('convert_res_b')
-  b = b.options[b.selectedIndex].value
-  let num = document.getElementById('num_convert_a').value
-  if (num<=0) return
-  let res = current_character().resources
-  let val_a = res[a].value
-  let val_b = res[b].value
-  let result = (num * val_a)/val_b
-  if(do_conversion){
-    if (res[a].amount < num){
-      document.getElementById('conversion_error').innerHTML='Insufficient '+res[a].name+' for conversion'
-    }else{
-      document.getElementById('conversion_error').innerHTML=''
-      res[a].amount -= num
-      res[b].amount += result
-      update_hud()
+// get color from theme, return default if not found
+game.get_color = function(key1, key2){
+  let theme = game.options.theme
+  let color = theme.default
+  if (theme[key1]){
+    if(theme[key1].constructor != Object){
+      color = theme[key1]
+    }else if (key2){
+      if (theme[key1][key2])
+        color = theme[key1][key2]
+      else if (theme[key1]['default'])
+        color = theme[key1]['default']
     }
   }
-  return result
+  return color
+}
+
+game.error = function(err){
+  console.error(err)
 }

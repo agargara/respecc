@@ -1,181 +1,169 @@
-const GOLD = 1.618033989
-export function draw_tree(ctx, game){
-  ctx.imageSmoothingEnabled = false
-  let tree = game.tree
-  if(!tree)
-    return
-  // get nodes to draw
-  let nodes_to_draw = []
-  Object.values(tree).forEach(node => {
-    if(node.hidden==false){
-      nodes_to_draw.push(node)
-    }
-  })
-  // Draw connections between nodes
-  nodes_to_draw.forEach(node => {
-    node.unlocks.forEach(id => {
-      let neighbor = tree[id]
-      if(neighbor){
-        if(!neighbor.hidden || neighbor.link_t != undefined){
-          animate(neighbor, game)
-          draw_connection(ctx, node, neighbor, game)
-        }
+export default class Draw {
+  constructor(game){
+    this.game = game
+    this.ctx = game.ctx
+    this.dt = game.display_transform
+    this.t = 0
+    this.times = []
+    this.init_draw()
+  }
+
+  init_draw(){
+    // start animation loop
+    requestAnimationFrame((time)=>{this.draw(time)})
+  }
+
+  draw(time){
+    // update transform
+    this.dt.update()
+    this.clear()
+    // draw FPS
+    this.draw_debug(this.get_fps(time)+'fps')
+    // redraw changed nodes
+    this.game.tree.redraw_nodes()
+    // draw tree canvas
+    this.draw_tree()
+    // draw characters
+    this.draw_characters()
+    requestAnimationFrame((time)=>{this.draw(time)})
+  }
+
+  clear(){
+    // set home transform to clear the screem
+    this.dt.setHome()
+    this.ctx.fillStyle = this.game.get_color('bgcolor')
+    this.ctx.fillRect(0, 0, this.game.canvas.width, this.game.canvas.height)
+    // set transform again
+    this.dt.setTransform()
+  }
+
+  draw_tree(){
+    let offset = this.game.tree.offset
+    for (let i=0; i<this.game.tree.canvases.length; i++){
+      let row = this.game.tree.canvases[i]
+      for(let j=0; j<row.length; j++){
+        let c = row[j]
+        this.ctx.drawImage(c, offset[0],offset[1])
       }
+    }
+    // redraw node text (workaround for high-res text)
+    Object.values(this.game.nodes).forEach((node)=>{
+      if (!node.hidden && node.link_t==undefined && node.outline_t==undefined)
+        this.draw_node_text(node)
     })
-  })
-  // Draw nodes themselves
-  nodes_to_draw.forEach(node => {
-    animate(node, game)
-    draw_node(ctx, node, game)
-  })
+    // draw current node detailed text
+    this.draw_node_detail()
+  }
 
-  // Draw characters
-  draw_characters(ctx, game)
+  draw_debug(text){
+    this.dt.setHome()
+    let x = this.game.canvas.width-12, y = 24
+    this.ctx.fillStyle = '#000'
+    this.ctx.fillRect(x, y+3, -32, -18)
+    this.ctx.fillStyle = '#fff'
+    this.ctx.textAlign = 'right'
+    this.ctx.font = '12px sans-serif'
+    this.ctx.fillText(text, x, y)
+    this.dt.setTransform()
+  }
 
-  // Draw node's detail description
-  draw_node_detail(ctx, game)
-}
+  get_fps(time){
+    this.times.push(time-this.t)
+    this.t = time
+    if (this.times.length > 6) this.times.shift()
+    const sum = this.times.reduce((a, b) => a + b, 0)
+    const avg = (sum / this.times.length) || 0
+    return Math.ceil(1000/avg)
+  }
 
-// process node animations
-function animate(node, game){
-  // slowly reveal connections
-  if (node.link_t!=undefined && node.link_t < 1){
-    node.link_t += (0.05*game.options.animation_speed)
-    if (node.link_t >= 1.0){
-      node.hidden = false
-      node.link_t = undefined
+  draw_characters(){
+    if (!this.game.images.characters) return
+    // Draw each character
+    let offset = this.game.options.node_size[1]-16
+    Object.values(this.game.characters).forEach(chara => {
+      let pos = this.game.gridpos_to_realpos(chara.pos)
+      // TODO draw just part of characters.png based on character class
+      // TODO offset x&y when multiple characters on node
+      this.ctx.imageSmoothingEnabled = false
+      this.ctx.drawImage(this.game.images.characters, pos[0]-offset, pos[1]-offset)
+      this.ctx.imageSmoothingEnabled = true
+    })
+  }
+
+  draw_node_text(node){
+    let text = node.text[this.game.options.lang]
+    if (!text) return
+    let margin = this.game.options.node_text_margin
+    let [w,h] = this.game.options.node_size
+    let [x,y] = this.game.gridpos_to_realpos(node.pos)
+    draw_text(this.ctx, text, x, y, w-margin, this.game, 'center', 3)
+    // draw cost in bottom left
+    if (node.status != 'activated'){
+      let cost = node.get_cost()+' 🌰'
+      let costx = x-w*0.5+14
+      let costy = y+h*0.5-2
+      this.ctx.fillStyle = this.game.get_color('nodes', 'cost')
+      let costw = this.ctx.measureText(cost).width
+      let ox = (costw-26)*0.5
+      draw_round_rect(this.ctx, costx-18, costy-10, costw+8, 24, 4, true, false)
+      draw_text(this.ctx, cost, costx+ox, costy, costw+8, this.game, 'center', 1)
     }
   }
-  // slowly reveal nodes
-  if (node.outline_t!=undefined && node.outline_t < 1 && !node.hidden){
-    node.outline_t += (0.02*game.options.animation_speed)
-    if (node.outline_t >= 1.0){
-      node.locked = false
-      node.outline_t = undefined
+
+  draw_node_detail(){
+
+    let game = this.game
+    let node = game.current_node()
+    // draw details
+    if (!(game.options.show_node_details && node.detail))
+      return
+    let ctx = this.ctx
+    let [x,y] = game.gridpos_to_realpos(node.pos)
+    let w = game.options.node_size[0]
+    let ww = w*2
+    let margin = 12
+    let padding = 16
+    let text = node.detail[game.options.lang]
+    let lines =  word_wrap(ctx, text, ww-8)
+    let hh = lines.length * 12+padding
+    let xoffset = w*0.5+margin
+    let triw = -margin
+    let trioffset = w*0.5+margin+2
+    if (node.pos[0] > 0){
+      xoffset = -padding-ww-xoffset
+      triw = -triw
+      trioffset = -trioffset
     }
+
+    // 1. draw outline
+    ctx.fillStyle = game.get_color('nodes', 'detailbg')
+    ctx.lineWidth = 6
+    ctx.strokeStyle = game.get_color('nodes', 'detailborder')
+    draw_round_rect(ctx, x+xoffset, y-hh*0.5-padding*0.5, ww+padding, hh+padding, 16, false, true)
+    // 2. draw triangle arrow
+    this.draw_tri(x+trioffset,y,triw)
+    // 3. draw fill
+    draw_round_rect(ctx, x+xoffset, y-hh*0.5-padding*0.5, ww+padding, hh+padding, 16, true, false)
+    // 4. draw text
+    ctx.fillStyle = game.get_color('nodes', 'detailtext')
+    draw_text(ctx, node.detail[game.options.lang], x+xoffset+padding*0.5+ww*0.5, y, ww-padding, game, 'center', 20)
+  }
+
+  draw_tri(x,y,w){
+    this.ctx.beginPath()
+    this.ctx.moveTo(x, y-w*0.5)
+    this.ctx.lineTo(x+w, y)
+    this.ctx.lineTo(x, y+w*0.5)
+    this.ctx.closePath()
+    this.ctx.stroke()
+    this.ctx.fill()
   }
 }
 
-export function draw_connection(ctx, node1, node2, game){
-  let [x1, y1, x2, y2] = get_connection_points(node1, node2, game)
-  // control point
-  let cx = x2
-  let cy = y1
-  // progress
-  let t = 1.0
-  if (node2.link_t!=undefined)
-    t = node2.link_t
-  let color
-  // dashed line if destination is locked and visible
-  if (node2.locked && !node2.hidden && !(node2.outline_t!=undefined && node2.outline_t < 1)){
-    color = get_color(game.options.theme, 'nodes', 'link_locked')
-    ctx.setLineDash([6, 6])
-  }else{
-    color = get_color(game.options.theme, 'nodes', 'link')
-    ctx.setLineDash([])
-  }
-  ctx.lineWidth = 8
-  ctx.strokeStyle = color
-  drawBezierSplit(ctx, x1, y1, cx, cy, x2, y2, 0, t)
-}
-
-// [optimize] don't recalculate this stuff every draw frame...
-function get_connection_points(node1, node2, game){
-  let [x1, y1] = game.gridpos_to_realpos(node1.pos)
-  let [x2, y2] = game.gridpos_to_realpos(node2.pos)
-  let yoffset = game.options.node_size*0.5
-  let xoffset = yoffset*GOLD
-  // [optimize] there's probably a clever way to simplify the logic below but my brain hurts too much to figure it out
-  if (x1 == x2){
-    if (y2 < y1){
-      // node 2 is directly above node 1:
-      y1 += -yoffset
-      y2 += yoffset
-    }else{
-      // node 2 is directly below node 1:
-      y1 += yoffset
-      y2 += -yoffset
-    }
-  }else{
-    // node 2: left or right of node 1?
-    let sign = 1
-    if (x2 < x1){
-      sign = -1
-    }
-    x1 += xoffset*sign
-    if (y1 == y2){
-      // same level
-      x2 += xoffset*sign
-    }else if (y2 < y1){
-      // up
-      y2 += yoffset
-    }else{
-      // down
-      y2 += -yoffset
-    }
-  }
-  return [x1, y1, x2, y2]
-}
-
-function draw_node(ctx, node, game){
-  let h = game.options.node_size
-  let w = h*GOLD
-  let [x,y] = game.gridpos_to_realpos(node.pos)
-  let color = get_color(game.options.theme, 'nodes', node.status)
-  ctx.fillStyle = color
-  // [optimize] probably would be faster to predraw
-  // node types onto a separate canvas once then copy that
-  let points = game.node_shapes[node.shape]
-  if (!points) {
-    if (node.pos[1] < 0)
-      points = game.node_shapes['defaultup']
-    else
-      points = game.node_shapes['defaultdown']
-  }
-  // partial outline when animating
-  let t = 1
-  if (node.outline_t != undefined)
-    t = node.outline_t
-  // add stroke if node is selected
-  if (node.selected){
-    color = get_color(game.options.theme, 'nodes', 'selected')
-    ctx.strokeStyle = color
-    ctx.lineWidth = 8
-    ctx.setLineDash([])
-  }
-  draw_points(ctx, x-w*0.5, y-h*0.5, points, t, true, node.selected)
-
-  // don't draw text while node is animating
-  if (node.link_t!=undefined && node.link_t < 1) return
-  if (node.outline_t!=undefined && node.outline_t < 1) return
-  draw_node_text(ctx, node, game)
-}
-
-function draw_node_text(ctx, node, game){
-  let text = node.text[game.options.lang]
-  let [x,y] = game.gridpos_to_realpos(node.pos)
-  let margin = game.options.node_text_margin
-  let h = game.options.node_size
-  let w = h*GOLD - margin
-  if(text)
-    draw_text(ctx, text, x, y, w, game, 'center', 3)
-  // draw cost in bottom left
-  if (node.status === 'deactivated'){
-    let cost = node.get_cost()+' 🌰'
-    let costx = x-w*0.5+14
-    let costy = y+h*0.5+2
-    ctx.fillStyle = get_color(game.options.theme, 'nodes', 'cost')
-    let costw = ctx.measureText(cost).width
-    let ox = (costw-26)*0.5
-    draw_round_rect(ctx, costx-18, costy-10, costw+8, 24, 4, true, false)
-    draw_text(ctx, cost, costx+ox, costy, costw+8, game, 'center', 1)
-  }
-}
-
-function draw_text(ctx, text, x, y, max_width, game, text_align='center', max_lines=3){
-  ctx.fillStyle = get_color(game.options.theme, 'nodes', 'text')
+export function draw_text(ctx, text, x, y, max_width, game, text_align='center', max_lines=3){
+  ctx.fillStyle = game.get_color('nodes', 'text')
   ctx.textAlign = text_align
-  let size = 12
+  let size = game.options.node_font_size
   ctx.font = size + 'px sans-serif'
   let lines =  word_wrap(ctx, text, max_width)
   // shrink text to fit in max lines
@@ -191,29 +179,11 @@ function draw_text(ctx, text, x, y, max_width, game, text_align='center', max_li
   lines.forEach((line, i) => {
     ctx.fillText(line, x, y+(i*lineheight)-yoffset)
   })
-  /* TODO
-  // replace emoji with images
-  ctx.imageSmoothingEnabled = false
-  ctx.drawImage(game.images.sp, x, y) */
+  // TODO replace emoji with images
 }
-
-function draw_characters(ctx, game){
-  if (!game.images.characters) return
-  // Draw each character
-  let offset = game.options.node_size-16
-  Object.values(game.characters).forEach(chara => {
-    let pos = game.gridpos_to_realpos(chara.pos)
-    // TODO draw just part of characters.png based on character class
-    // TODO offset x&y when multiple characters on node
-    ctx.imageSmoothingEnabled = false
-    ctx.drawImage(game.images.characters, pos[0]-offset, pos[1]-offset)
-  })
-}
-
-
 
 // draw a portion of a point array
-function draw_points(ctx, x, y, points, portion, fill=true, stroke=false){
+export function draw_points(ctx, x, y, points, portion, fill=true, stroke=false){
   let z = points.length
   let len1 = z
   if (portion < 1){
@@ -236,44 +206,6 @@ function draw_points(ctx, x, y, points, portion, fill=true, stroke=false){
   if (stroke) ctx.stroke()
 }
 
-function draw_node_detail(ctx, game){
-  let node = game.current_node()
-  // draw details
-  if (!(node.selected && game.options.show_node_details && node.detail))
-    return
-
-  let [x,y] = game.gridpos_to_realpos(node.pos)
-  let w = game.options.node_size*GOLD
-  let ww = w*GOLD
-  let margin = 12
-  let padding = 16
-  ctx.fillStyle = get_color(game.options.theme, 'nodes', 'detailbg')
-  ctx.lineWidth = 4
-  ctx.strokeStyle = get_color(game.options.theme, 'nodes', 'detailborder')
-  let text = node.detail[game.options.lang]
-  let lines =  word_wrap(ctx, text, ww-8)
-  let hh = lines.length * 12+padding
-  draw_round_rect(ctx, x+w*0.5+margin, y-hh*0.5-padding*0.5, ww+padding, hh+padding, 16, true, true)
-  ctx.fillStyle = get_color(game.options.theme, 'nodes', 'detailtext')
-  draw_text(ctx, node.detail[game.options.lang], x+w*0.5+margin+padding*0.5+ww*0.5, y, ww-padding, game, 'center', 20)
-}
-
-// get color from theme, return default if not found
-function get_color(theme, key1, key2){
-  let color = theme.default
-  if (theme[key1]){
-    if(theme[key1].constructor != Object){
-      color = theme[key1]
-    }else if (key2){
-      if (theme[key1][key2])
-        color = theme[key1][key2]
-      else if (theme[key1]['default'])
-        color = theme[key1]['default']
-    }
-  }
-  return color
-}
-
 /**
  * Draws a portion of a quadratic curve
  *
@@ -287,7 +219,7 @@ function get_color(theme, key1, key2){
  * @param t0        The start ratio of the splitted bezier from 0.0 to 1.0
  * @param t1        The start ratio of the splitted bezier from 0.0 to 1.0
  */
-function drawBezierSplit(ctx, x0, y0, x1, y1, x2, y2, t0, t1) {
+export function drawBezierSplit(ctx, x0, y0, x1, y1, x2, y2, t0, t1) {
   ctx.beginPath()
 
   if( 0.0 == t0 && t1 == 1.0 ) {
@@ -338,7 +270,7 @@ function drawBezierSplit(ctx, x0, y0, x1, y1, x2, y2, t0, t1) {
  * @param {Boolean} [fill = false] Whether to fill the rectangle.
  * @param {Boolean} [stroke = true] Whether to stroke the rectangle.
  */
-function draw_round_rect(ctx, x, y, width, height, radius, fill, stroke) {
+export function draw_round_rect(ctx, x, y, width, height, radius, fill, stroke) {
   if (typeof stroke === 'undefined') {
     stroke = true
   }
@@ -395,6 +327,19 @@ function word_wrap(ctx, text, maxw) {
   })
   lines.push(currentline)
   return lines
+}
+
+function draw_debug_text(ctx, game){
+  let text = game.debugtext
+  ctx.fillStyle = '#fff'
+  ctx.textAlign = 'right'
+  ctx.font = '12px sans-serif'
+  let x = game.canvas.width-12, y = 24
+  let lines = text.split('\n')
+  game.display_transform.setHome()
+  lines.forEach((line, i) => {
+    ctx.fillText(line, x, y+(i*12))
+  })
 }
 
 /**

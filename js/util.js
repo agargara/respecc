@@ -68,13 +68,17 @@ export function load_image (url) {
 
 // [optimize] this could create recursion hell...
 // copy elements of a into b
-export function deep_merge(a, b){
-  if (!isobj(a) || !isobj(b))
-    return
+export function deep_merge(a, b, c=0){
+  if (c > 8)
+    throw ('you tried to merge too deep :( '+a)
+  c++
+  if (!isobj(a))
+    return c
   Object.entries(a).forEach(([k, v]) => {
     if (isobj(v)){
-      if (isobj(b[k]))
-        deep_merge(v, b[k])
+      if (!isobj(b[k]))
+        b[k] = {}
+      deep_merge(v, b[k], c)
     }else{
       b[k] = v
     }
@@ -126,25 +130,32 @@ export function hit_circle(x1, y1, x2, y2, r){
     return false
 }
 
-export function get_display_transform(ctx, canvas, mouse){
+export function get_display_transform(ctx, canvas, mouse, options){
+  let [initx, inity] = [-canvas.width*0.5, -canvas.height*0.5]
+  if (options.initx)
+    initx += options.initx
+  if (options.inity)
+    inity += options.inity
   return {
-    x:-canvas.width/2,
-    y:-canvas.height/2,
+    zoom_min: options.zoom_min,
+    zoom_max: options.zoom_max,
+    x:initx,
+    y:inity,
     ox:0,
     oy:0,
-    scale:1,
+    scale:options.zoom_default,
     rotate:0,
-    cx:-canvas.width/2,
-    cy:-canvas.height/2,
+    cx:initx,
+    cy:inity,
     cox:0,
     coy:0,
-    cscale:1,
+    cscale:options.zoom_default,
     crotate:0,
     dx:0,  // deltat values
     dy:0,
     dox:0,
     doy:0,
-    dscale:1,
+    dscale:options.zoom_default,
     drotate:0,
     drag:0.1,  // drag for movements
     accel:0.7, // acceleration
@@ -236,6 +247,8 @@ export function get_display_transform(ctx, canvas, mouse){
             if(mouse.pos.z < 0){
               mouse.pos.z = 0
             }
+            if (this.scale > this.zoom_max)
+              this.scale = this.zoom_max
           }
           if(mouse.pos.z < 0){ // zoom out
             this.scale *= 1/1.1
@@ -243,6 +256,8 @@ export function get_display_transform(ctx, canvas, mouse){
             if(mouse.pos.z > 0){
               mouse.pos.z = 0
             }
+            if (this.scale < this.zoom_min)
+              this.scale = this.zoom_min
           }
         }
         // get the real mouse position

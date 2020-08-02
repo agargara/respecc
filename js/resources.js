@@ -12,6 +12,6 @@ export function init_resources() {
   return {
     'sp': new Resource('🌰',1,true),
     'figs': new Resource('🍊',2,true),
-    'worms': new Resource('🐛',1,true),
+    'worms': new Resource('🐛',5,true),
   }
 }
