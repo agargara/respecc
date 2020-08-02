@@ -1,8 +1,6 @@
 /* TODO
   HIGH
   refactor code:
-    - store ordered purchased node list in Character
-      - this will allow save/load of builds, as well as separate builds per character
     - when drawing nodes check current character to decide which nodes are active
   test if performance suffers with 1000 nodes
 
