@@ -64,6 +64,34 @@ class Character {
     clearTimeout(this.move_timeout)
   }
 
+  // Step one node in a given angle
+  step(angle){
+    // Closest neighbor must be less than 90 degrees
+    let min_diff = Math.PI*0.5
+    let closest_neighbor
+    let dy,dx
+    let cn = this.nodes[this.current_node]
+    cn.neighbors.forEach((neighbor)=>{
+      // skip hidden and unreachable
+      let n = this.nodes[neighbor]
+      if (!n || n.hidden || !n.is_reachable()) return
+      // get difference in angles
+      dx = n.pos[0] - cn.pos[0]
+      dy = n.pos[1] - cn.pos[1]
+      let angle2 = Math.atan2(dy, dx)
+      let diff = angle2-angle
+      if (diff > Math.PI) diff -= Math.PI*2
+      if (diff < -Math.PI) diff += Math.PI*2
+      diff = Math.abs(diff)
+      if (diff < min_diff){
+        min_diff = diff
+        closest_neighbor = neighbor
+      }
+    })
+    if (closest_neighbor)
+      this.move(closest_neighbor)
+  }
+
   move(target){
     // check that target is valid
     if(!this.reachable_nodes[target]) return

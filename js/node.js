@@ -10,6 +10,7 @@ export default class Node {
     Object.entries(node).forEach(([k, v]) => {
       this[k] = v
     })
+    this.neighbors = new Set(this.unlocks)
     // set shape
     if(!this.shape){
       if (this.pos[1] < 0)
@@ -61,7 +62,7 @@ export default class Node {
     }
     if (discount > cost*0.5)
       discount = cost*0.5
-    return cost - discount
+    return Math.ceil(cost - discount)
   }
 
   draw(){

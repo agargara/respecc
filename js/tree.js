@@ -963,8 +963,10 @@ export default class Tree{
       node.hidden = false // TODO reveal all for debugging
       node.id = id
       node.unlocks.forEach((neighbor)=>{
-        if (nodes[neighbor] != undefined)
+        if (nodes[neighbor] != undefined){
           nodes[neighbor].parents.add(node)
+          nodes[neighbor].neighbors.add(id)
+        }
       })
     })
     return nodes

@@ -1,10 +1,11 @@
 /* TODO
   HIGH
-  put resource conversion code in Character
   improve conversion rate ability
-  only allow integer conversion
   switching characters
     - set node statuses based on character
+  rework movement code - don't go to nearest node, but only to connected nodes
+    keep neighbor list in each node
+  give the world a sense of scale: space nodes farther apart?
 
   MEDIUM
   more nodes!
@@ -20,8 +21,10 @@
   reveal entire areas instead of one node at a time
   NEW CHARACTER!!!
   resource autoconversion skill
+  mini-map
 
   LOW
+  a tab with all your resources displayed in a pile, growing things
   character pathfinding
     move along curved paths
   better looking graphics
@@ -422,9 +425,9 @@ function handle_movement(){
   }
   if (dy == 0 && dx == 0) return
   let angle = Math.atan2(dy, dx)
+  current_character().step(angle)
 
-  // find closest unlocked node to current character in direction
-  let c = current_character()
+  /*
   let pos = c.pos
   let closest_distance = 9999
   let closest_angle = 10
@@ -453,6 +456,7 @@ function handle_movement(){
   })
   if(closest_node_id != null)
     c.move(closest_node_id)
+  */
 }
 
 function mouse_move(event) {
