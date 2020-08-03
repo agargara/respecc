@@ -208,17 +208,15 @@ export default class Tree{
       }),
       'figs09': new Node(game, this, {
         'pos': [ 3, -3 ],
-        'cost': 8,
+        'cost': 2,
         'text': {
-          'en': '+0.2 🍊 per active node\n(max 8)'
+          'en': '+1 🍊'
         },
         'area': 'figs',
         'shape': 'lump',
-        'unlocks': ['figs10'],
+        'unlocks': ['figs10', 'town01'],
         'onactivate': function(game){
-          let amount = 0.5 * game.current_character().activated_nodes.size
-          if (amount > 8) amount = 8
-          game.current_character().resources.figs.amount += amount
+          game.current_character().resources.figs.amount += 1
         }
       }),
       'figs10': new Node(game, this, {
@@ -242,9 +240,24 @@ export default class Tree{
         },
         'area': 'figs',
         'shape': 'lump',
-        'unlocks': ['figs13'],
+        'unlocks': ['figs11a', 'figs13'],
         'onactivate': function(game){
           game.current_character().onrespec.resources.figs += 2
+        }
+      }),
+      'figs11a': new Node(game, this, {
+        'pos': [ 4, -4 ],
+        'cost': 8,
+        'text': {
+          'en': '+0.2 🍊 per active node\n(max 8)'
+        },
+        'area': 'figs',
+        'shape': 'lump',
+        'unlocks': [],
+        'onactivate': function(game){
+          let amount = 0.5 * game.current_character().activated_nodes.size
+          if (amount > 8) amount = 8
+          game.current_character().resources.figs.amount += amount
         }
       }),
       'figs12': new Node(game, this, {
@@ -303,11 +316,74 @@ export default class Tree{
         'area': 'worms',
         'shape': 'wiggly',
         'unlocks': [
-          'worms02'
+          'worms01a', 'worms02'
         ],
         'onactivate': function(game){
           game.current_character().resources.worms.amount += 1
         }
+      }),
+      'worms01a': new Node(game, this, {
+        'pos': [ 2, 2 ],
+        'cost': 4,
+        'text': {
+          'en': '+1 🐛'
+        },
+        'area': 'worms',
+        'shape': 'wiggly',
+        'unlocks': [
+          'worms01b'
+        ],
+        'onactivate': function(game){
+          game.current_character().resources.worms.amount += 1
+        }
+      }),
+      'worms01b': new Node(game, this, {
+        'pos': [ 3, 3 ],
+        'cost': 6,
+        'text': {
+          'en': '+1 🐛'
+        },
+        'area': 'worms',
+        'shape': 'wiggly',
+        'unlocks': [
+          'worms01c'
+        ],
+        'onactivate': function(game){
+          game.current_character().resources.worms.amount += 1
+        }
+      }),
+      'worms01c': new Node(game, this, {
+        'pos': [ 3, 4 ],
+        'cost': 8,
+        'text': {
+          'en': '+2 🐛'
+        },
+        'area': 'worms',
+        'shape': 'wiggly',
+        'unlocks': [
+          'worms01d'
+        ],
+        'onactivate': function(game){
+          game.current_character().resources.worms.amount += 2
+        }
+      }),
+      'worms01d': new Node(game, this, {
+        'pos': [ 3, 5 ],
+        'cost': 8,
+        'text': {
+          'en': '+1 🐛\n(permanent)'
+        },
+        'detail': {
+          'en': 'Permanently gain +1 🐛. Can only be purchased once per character.'
+        },
+        'area': 'worms',
+        'shape': 'wiggly',
+        'unlocks': [],
+        'onactivate': function(game){
+          game.current_character().resources.worms.amount += 1
+          game.current_character().resources.worms.permanent += 1
+        },
+        'permanent': true
       }),
       'worms02': new Node(game, this, {
         'pos': [ 1, 3 ],
@@ -801,7 +877,7 @@ export default class Tree{
         },
       }),
       '40': new Node(game, this, {
-        'pos': [ -3, -10 ],
+        'pos': [ -4, -10 ],
         'cost': 16,
         'text': {
           'en': '+16 🌰'
@@ -813,7 +889,7 @@ export default class Tree{
         },
       }),
       '41': new Node(game, this, {
-        'pos': [ -3, -11 ],
+        'pos': [ -4, -11 ],
         'cost': 32,
         'text': {
           'en': '+32 🌰'
@@ -825,7 +901,7 @@ export default class Tree{
         },
       }),
       '42': new Node(game, this, {
-        'pos': [ -3, -12 ],
+        'pos': [ -4, -12 ],
         'cost': 64,
         'text': {
           'en': '+64 🌰'
@@ -837,7 +913,7 @@ export default class Tree{
         },
       }),
       '43': new Node(game, this, {
-        'pos': [ -3, -13 ],
+        'pos': [ -5, -13 ],
         'cost': 128,
         'text': {
           'en': '+128 🌰'
@@ -849,7 +925,7 @@ export default class Tree{
         },
       }),
       '44': new Node(game, this, {
-        'pos': [ -3, -14 ],
+        'pos': [ -5, -14 ],
         'cost': 0,
         'text': {
           'en': '+128 🌰\n(permanent)'
@@ -955,6 +1031,30 @@ export default class Tree{
         'unlocks': [],
         'onactivate': function(game){
           game.current_character().resources.sp.amount += 100
+        },
+      }),
+      'town01': new Node(game, this, {
+        'pos': [ 3, -2 ],
+        'cost': 2,
+        'text': {
+          'en': '+1 🌰'
+        },
+        'area': 'town',
+        'unlocks': ['town02'],
+        'onactivate': function(game){
+          game.current_character().resources.sp.amount += 1
+        },
+      }),
+      'town02': new Node(game, this, {
+        'pos': [ 4, -2 ],
+        'cost': 4,
+        'text': {
+          'en': 'Increase party size by 1'
+        },
+        'area': 'town',
+        'unlocks': [],
+        'onactivate': function(game){
+          // TODO
         },
       }),
     }
@@ -1084,6 +1184,7 @@ export default class Tree{
   }
 
   draw_connections(node){
+    if (!node.unlocks) return
     node.unlocks.forEach((id)=>{
       let neighbor = this.nodes[id]
       if (neighbor && (!neighbor.hidden || neighbor.link_t !== undefined)){
