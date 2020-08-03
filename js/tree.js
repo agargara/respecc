@@ -1060,7 +1060,7 @@ export default class Tree{
     }
     // Add id & neighbor information to nodes
     Object.entries(nodes).forEach(([id, node])=>{
-      node.hidden = false // TODO reveal all for debugging
+      //node.hidden = false // TODO reveal all for debugging
       node.id = id
       node.unlocks.forEach((neighbor)=>{
         if (nodes[neighbor] != undefined){
