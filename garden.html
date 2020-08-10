@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Garden</title>
+  <link rel="stylesheet" href="css/default.css">
+  <script type="module" src="js/test_garden.js"></script>
+</head>
+<body>
+  <div id="hud">
+    <span id="hud_left"></span>
+    <span id="status"></span>
+  </div>
+  <div id="garden" class="tab">
+    <canvas id="garden_canvas" resize></canvas>
+    <script type="text/paperscript" src="js/garden.js" canvas="garden_canvas"></script>
+  </div>
+  <div id="navigation">
+    <div id="nav-garden" class="selected">Garden</div>
+  </div>
+  <div id="debug"></div>
+</body>
+</html>

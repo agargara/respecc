@@ -1,8 +1,8 @@
 /* TODO
   HIGH
-  Create New Character
   switching characters
     - set node statuses based on character
+    - multiple characters per node
   lock paths
   Garden Tab :)
 
@@ -63,7 +63,7 @@ var game = {}
 window.game = game // allow console access for easy debugging
 var nodes
 var characters
-var canvas, ctx            // canvas and drawing context
+var canvas, ctx, garden_canvas // canvas and drawing context
 var vw, vh                 // viewport height/width
 var keys_pressed = {}
 var mouse = {
@@ -178,6 +178,7 @@ function init_game(){
   game.characters = characters
   game.state = {}
   canvas = document.getElementById('game_screen')
+  garden_canvas = document.getElementById('garden_canvas')
   ctx = canvas.getContext('2d')
   game.canvas = canvas
   game.ctx = ctx
@@ -813,6 +814,8 @@ function resize(){
   vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0)
   canvas.width  = vw*0.8 - 2 // subtract 2 for border
   canvas.height = vh*0.8 - 2
+  garden_canvas.width  = vw*0.8 - 2
+  garden_canvas.height = vh*0.8 - 2
 }
 
 // pan so that cursor is not too far from center
