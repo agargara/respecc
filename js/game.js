@@ -1,15 +1,16 @@
 /* TODO
   HIGH
-  improve conversion rate ability
+  Create New Character
   switching characters
     - set node statuses based on character
-  rework movement code - don't go to nearest node, but only to connected nodes
-    keep neighbor list in each node
-  give the world a sense of scale: space nodes farther apart?
+  lock paths
+  Garden Tab :)
 
   MEDIUM
   automation
   more nodes!
+    improve conversion rate ability
+  better balance
   level up mechanic
   more cool looking node shapes
   use own icons instead of emojis
@@ -34,6 +35,10 @@
     color themes
 
   IDEAS
+  characters are locked to paths to prevent excessive backtracking.
+(later: gain the ability to unlock these paths)
+making new characters is free/cheap. encourage making multiple characters for each path and switching between them often.
+
   store xy position in character object and draw based on that
   characters handle their own animation
   make draw.js into class?
