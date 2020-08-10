@@ -1,13 +1,14 @@
 import {init_resources} from './resources.js'
 import {DefaultDict, deep_merge} from './util.js'
-class Character {
-  constructor(game, classy, node, color) {
+export default class Character {
+  constructor(game, classy, node, color, name) {
     this.game = game
     this.nodes = game.nodes
     this.classy = classy
     this.start_node = node
     this.current_node = 0
     this.color = color
+    this.name = name
     this.pos = Array.from(this.nodes[node].pos)
     this.reachable_nodes = {
       '0': true
@@ -23,8 +24,7 @@ class Character {
     this.canvas.height = 32
     this.canvas.width = 32
     this.ctx = this.canvas.getContext('2d')
-    // TODO split image into separate characters
-    this.img = game.images['characters']
+    this.img = game.images['icon_'+this.classy]
   }
 
   reset(){
@@ -157,10 +157,6 @@ class Character {
     node.status = 'activated'
     // purchase node
     this.game.purchase_node(node)
-    // show respec hint when out of SP
-    if (this.resources.sp.amount == 0){
-      this.game.hint('respec')
-    }
   }
 
   can_activate(node, nodeid){
@@ -193,6 +189,7 @@ class Character {
       return 'deactivated'
   }
 
+  // called when loading save file
   reactivate_nodes(){
     if (!this.nodes_to_activate) return
     this.nodes_to_activate.forEach((nodeid) => {
@@ -206,15 +203,5 @@ class Character {
     this.ctx.imageSmoothingEnabled = false
     this.ctx.drawImage(this.image, 0, 0)
     this.ctx.imageSmoothingEnabled = true
-  }
-}
-export function init_characters(game) {
-  return {
-    'arborist': new Character(
-      game,
-      'Arborist',
-      0,
-      '#8E9B58', // moss green
-    )
   }
 }

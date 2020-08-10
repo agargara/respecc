@@ -77,15 +77,16 @@ export default class Draw {
   }
 
   draw_characters(){
-    if (!this.game.images.characters) return
     // Draw each character
     let offset = this.game.options.node_size[1]-16
     Object.values(this.game.characters).forEach(chara => {
+      let img = chara.img
+      if (!img) return
       let pos = this.game.gridpos_to_realpos(chara.pos)
       // TODO draw just part of characters.png based on character class
       // TODO offset x&y when multiple characters on node
       this.ctx.imageSmoothingEnabled = false
-      this.ctx.drawImage(this.game.images.characters, pos[0]-offset, pos[1]-offset)
+      this.ctx.drawImage(img, pos[0]-offset, pos[1]-offset)
       this.ctx.imageSmoothingEnabled = true
     })
   }

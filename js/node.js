@@ -40,6 +40,11 @@ export default class Node {
     this.id=''
   }
 
+  reset(){
+    this.selected = false
+    this.status = 'deactivated'
+  }
+
   is_reachable(){
     if (!this.id) return false
     return this.game.current_character().reachable_nodes[this.id]

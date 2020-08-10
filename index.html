@@ -28,7 +28,7 @@
       <input type='number' id='num_convert_b' min='0' step='1' value='' readonly>
       <select name="convert_res_b" id="convert_res_b">
       </select>
-      <div id='conversion_error'></div>
+      <div id='conversion_error' class='error_text'></div>
     </div>
   </div>
   <div id="options" class="menu tab hidden">
@@ -38,8 +38,27 @@
     <div id="nav-tree" class="selected">Tree</div>
     <div id="nav-character">Character</div>
     <div id="nav-options">Options</div>
+    <div id="btn_reveal">Toggle Reveal All Nodes</div>
     <div id="btn_reset">Delete save</div>
     <div id="btn_cheat">Cheat</div>
+    <div id="btn_newcharadialog">New Character</div>
+  </div>
+  <div id="new_character_dialog" class="center_container dialog_back hidden">
+    <div class="dialog">
+      <div class="dialog_line">
+        <label for="new_chara_class">Class</label><span id="new_chara_class">Arborist</span>
+      </div>
+      <div class="dialog_line">
+        <label for="new_chara_name">Name</label><input id="new_chara_name">
+      </div>
+      <div class="dialog_line">
+        <button id="btn_random_name" class="btn_standard">Random Name</button>
+      </div>
+      <div class="dialog_bottom">
+        <div id='chara_error' class='error_text'></div>
+        <button id="btn_new_chara" class="btn_standard">Create Character</button>
+      </div>
+    </div>
   </div>
   <div id="debug"></div>
 </body>

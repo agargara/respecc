@@ -12,6 +12,8 @@ export default class Tree{
     this.nodes_to_redraw = new Set()
     this.get_bounds()
     this.init_canvases()
+    if (game.options.reveal_all)
+      this.reveal_all()
   }
 
   init_tree(){
@@ -1049,18 +1051,21 @@ export default class Tree{
         'pos': [ 4, -2 ],
         'cost': 4,
         'text': {
-          'en': 'Increase party size by 1'
+          'en': 'Horticulturalist'
+        },
+        'detail': {
+          'en': 'Create a new Horticulturalist character. Can only be activated once.'
         },
         'area': 'town',
         'unlocks': [],
+        'permanent': true,
         'onactivate': function(game){
-          // TODO
+          game.new_character_dialog('Horticulturalist', 'Udumbara')
         },
       }),
     }
     // Add id & neighbor information to nodes
     Object.entries(nodes).forEach(([id, node])=>{
-      //node.hidden = false // TODO reveal all for debugging
       node.id = id
       node.unlocks.forEach((neighbor)=>{
         if (nodes[neighbor] != undefined){
@@ -1070,6 +1075,12 @@ export default class Tree{
       })
     })
     return nodes
+  }
+
+  reveal_all(){
+    Object.values(this.nodes).forEach((node)=>{
+      node.hidden = false
+    })
   }
 
   get_bounds(){
@@ -1126,6 +1137,7 @@ export default class Tree{
         ctx.clearRect(0,0,j.width,j.height)
       })
     })
+    this.draw()
   }
 
   draw(){
@@ -1269,5 +1281,12 @@ export default class Tree{
     x = (x%divx)*d[0]
     y = (y%divy)*d[1]
     return [i,j,x,y]
+  }
+
+  // Reset all nodes
+  reset_nodes(){
+    Object.values(this.nodes).forEach((node)=>{
+      node.reset()
+    })
   }
 }

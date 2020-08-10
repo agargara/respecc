@@ -8,6 +8,7 @@
   give the world a sense of scale: space nodes farther apart?
 
   MEDIUM
+  automation
   more nodes!
   level up mechanic
   more cool looking node shapes
@@ -46,11 +47,11 @@
 */
 
 import {clearelem, get, load_image, deep_copy, deep_merge, hit_circle, get_display_transform} from './util.js'
-import Draw from './draw.js'
 import Tree from './tree.js'
+import Character from './character.js'
+import Draw from './draw.js'
 import Animate from './animate.js'
-import {init_characters} from './characters.js'
-import {get_string} from './strings.js'
+import {get_string, random_name} from './strings.js'
 import {options} from './options.js'
 
 var game = {}
@@ -79,7 +80,8 @@ function load_assets(){
   document.getElementById('loading_overlay').classList.remove('hidden')
   const promises = [
     get('resources/nodes.svg', 'svg'),
-    load_image('img/characters.png'),
+    load_image('img/icon_Arborist.png'),
+    load_image('img/icon_Horticulturalist.png'),
     load_image('img/sp.png'),
   ]
   Promise.allSettled(promises).
@@ -87,21 +89,26 @@ function load_assets(){
       if (results[0].status === 'fulfilled')
         game.nodes_svg = results[0].value
       if (results[1].status === 'fulfilled')
-        game.images['characters'] = results[1].value
+        game.images['icon_Arborist'] = results[1].value
       if (results[2].status === 'fulfilled')
-        game.images['sp'] = results[2].value
+        game.images['icon_Horticulturalist'] = results[2].value
+      if (results[3].status === 'fulfilled')
+        game.images['sp'] = results[3].value
       init()
     })
 }
 
 function init(){
-  init_svgs()
-  init_game()
-  init_hints()
+  init_svgs() // convert svgs to point data
+  init_game() // initalize game object
   load() // load save data
-  update_hud()
   // get display transform to handle zoom and pan
-  let [initx,inity] = game.gridpos_to_realpos(current_character().pos)
+  let initx,inity
+  let c = current_character()
+  if (c)
+    [initx,inity] = game.gridpos_to_realpos(c.pos)
+  else
+    [initx,inity] = game.gridpos_to_realpos([0,0])
   let opt = {
     'zoom_min': game.options.zoom_min,
     'zoom_max': game.options.zoom_max,
@@ -110,6 +117,27 @@ function init(){
     'inity': inity
   }
   game.display_transform = get_display_transform(ctx, canvas, mouse, opt)
+  init_newchara_listeners() // new character dialog listeners
+  if (!current_character())
+    first_character()
+  else
+    init_draw()
+}
+
+async function first_character(){
+  document.getElementById('loading_overlay').classList.add('hidden')
+  let promise = new Promise((resolve) => {
+    game.create_character = resolve
+    game.new_character_dialog('Arborist')
+  })
+  await promise.then(init_draw)
+}
+
+function init_draw(){
+  // start showing hints
+  init_hints()
+  // update HUD
+  update_hud()
   // draw tree
   game.tree.draw()
   game.animate = new Animate(game)
@@ -141,11 +169,9 @@ function init_game(){
   nodes = game.tree.nodes
   game.nodes = nodes
   nodes[0].selected = true
-  characters = init_characters(game)
+  characters = {}
   game.characters = characters
-  game.state = {
-    'current_character': 'arborist'
-  }
+  game.state = {}
   canvas = document.getElementById('game_screen')
   ctx = canvas.getContext('2d')
   game.canvas = canvas
@@ -196,23 +222,24 @@ function init_hints(){
 */
 function load(){
   let save = localStorage.getItem('save')
-  if (save){
-    save = JSON.parse(save)
-    game.state = save.state
-    Object.entries(save.unlocks).forEach(
-      ([feature,unlocked])=>{
-        if(unlocked) game.unlock(feature)
-      }
-    )
-    game.options = save.options
-    deep_merge(save.nodes, game.nodes)
-    Object.entries(save.characters).forEach(([key, value])=>{
-      Object.assign(characters[key], value)
-    })
-    Object.values(characters).forEach((chara)=>{
-      chara.reactivate_nodes()
-    })
-  }
+  if(!save) return
+  save = JSON.parse(save)
+  game.state = save.state
+  Object.entries(save.unlocks).forEach(
+    ([feature,unlocked])=>{
+      if(unlocked) game.unlock(feature)
+    }
+  )
+  game.options = save.options
+  deep_merge(save.nodes, game.nodes)
+  Object.entries(save.characters).forEach(([key, value])=>{
+    if (!characters[key])
+      characters[key]=new Character(game, value.classy, value.start_node, value.color)
+    Object.assign(characters[key], value)
+  })
+  Object.values(characters).forEach((chara)=>{
+    chara.reactivate_nodes()
+  })
 }
 
 function save(){
@@ -243,6 +270,10 @@ function save(){
       'nodes_to_activate': Array.from(chara.activated_nodes.keys()),
       'resources': chara.resources,
       'abilities': chara.abilities,
+      'start_node': chara.start_node,
+      'color': chara.color,
+      'classy': chara.classy,
+      'level': chara.level
     }
   })
   localStorage.setItem('save',JSON.stringify(save))
@@ -273,7 +304,6 @@ function respec(){
   update_hud()
   // redraw tree
   game.tree.clear()
-  game.tree.draw()
   game.dontsave = false
 }
 
@@ -334,6 +364,20 @@ game.purchase_node = function(node){
 /*
   [EVENT] event listeners (keyboard, mouse, resize, etc.)
 */
+function init_newchara_listeners(){
+  document.getElementById('btn_newcharadialog').addEventListener('click', ()=>{
+    game.new_character_dialog('Horticulturalist')
+  })
+  document.getElementById('btn_random_name').addEventListener('click', ()=>{
+    let n, cn = document.getElementById('new_chara_name').value
+    do { n = random_name(game.options.lang) } while (cn == n)
+    document.getElementById('new_chara_name').value = n
+  })
+  document.getElementById('btn_new_chara').addEventListener('click', ()=>{
+    game.new_character()
+  })
+}
+
 function init_listeners(){
   window.addEventListener('resize', resize)
   // navigation buttons
@@ -357,6 +401,11 @@ function init_listeners(){
       res.amount += 100
       update_hud()
     })
+  })
+  document.getElementById('btn_reveal').addEventListener('click', ()=>{
+    game.options.reveal_all = !game.options.reveal_all
+    if (game.options.reveal_all)
+      game.tree.reveal_all()
   })
   // text/number inputs
   document.getElementById('num_convert_a').addEventListener('input', ()=>{
@@ -535,6 +584,50 @@ function mouse_to_game_coords(x, y){
 /*
   [UI] altering the interface and view
 */
+game.new_character_dialog = function(classy){
+  let d = document.getElementById('new_character_dialog')
+  document.getElementById('chara_error').innerHTML = ''
+  document.getElementById('new_chara_class').innerHTML = classy
+  console.log(classy)
+  let defaultname = get_string('default_names', classy, game.options.lang)
+  document.getElementById('new_chara_name').placeholder = defaultname
+  d.classList.remove('hidden')
+}
+game.new_character = function(){
+  game.dontsave = true
+  let name = document.getElementById('new_chara_name').value
+  if (name === ''){
+    name = document.getElementById('new_chara_name').placeholder
+  }
+  try{
+    validate_name(name)
+  }catch(err){
+    document.getElementById('chara_error').innerHTML = 'Invalid name: '+err
+    return
+  }
+  let classy = document.getElementById('new_chara_class').innerHTML
+  let color = game.get_color('characters', classy)
+  game.characters[classy] = new Character(game, classy, 0, color, name)
+  game.state.current_character = classy
+  let d = document.getElementById('new_character_dialog')
+  d.classList.add('hidden')
+  update_hud()
+  // redraw tree
+  game.tree.reset_nodes()
+  nodes[0].selected = true
+  game.tree.clear()
+  game.pan(0,0)
+  game.dontsave = false
+  // resolve promise
+  if (game.create_character)
+    game.create_character()
+}
+function validate_name(name){
+  if (!name) throw('Empty')
+  if (name.length > 32)  throw('Sorry, name cannot be longer than 32 characters')
+  return true
+}
+
 function str( category, status){
   return get_string(category, status, game.options.lang)
 }
@@ -571,6 +664,7 @@ function update_status(category, status, fade=true){
 }
 
 function update_hud(){
+  let c = current_character()
   // clear hud and resource list
   let hud = document.getElementById('hud_left')
   clearelem(hud)
@@ -584,10 +678,9 @@ function update_hud(){
   seasonelem.innerHTML = 'Season: <span class="'+s+'">'+s+'</span>'
 
   // current character info
-  let c = current_character()
   let charelem = document.createElement('span')
   charelem.classList.add('hud_character')
-  charelem.innerHTML = '<img class="portrait pixelated" src="'+c.portrait+'"> Level '+c.level+' '+c.classy
+  charelem.innerHTML = '<img class="portrait pixelated" src="'+c.portrait+'"><div class="chara_hud">'+c.name+'<br>Level '+c.level+' '+c.classy+'</div>'
 
   // resource list
   let reselem = document.createElement('span')
@@ -617,7 +710,7 @@ function update_character_tab(){
   let c = current_character()
   let charelem = document.createElement('h2')
   charelem.classList.add('character_info')
-  charelem.innerHTML = '<img class="portrait_large pixelated" src="'+c.portrait+'">Level '+c.level+' '+c.classy
+  charelem.innerHTML = '<img class="portrait_large pixelated" src="'+c.portrait+'"><div class="chara_header">'+c.name+'<br>Level '+c.level+' '+c.classy+'</div>'
   let info = document.getElementById('chara_info')
   clearelem(info)
   info.appendChild(charelem)
@@ -691,7 +784,7 @@ function convert_resources(do_conversion=false){
 
 // Display hint text
 async function hint(hintid, callback){
-  let text = str('hints','respec')
+  let text = str('hints', hintid)
   var container = document.getElementById('hints')
   var elem = document.createElement('div')
   elem.innerHTML = text
@@ -749,6 +842,13 @@ game.autopan = function(){
     // pan up
     dt.y = (h*m-h+y+dt.coy)/mat[0]
   }
+}
+game.pan = function(x,y){
+  let dt = game.display_transform
+  let w = canvas.width * 0.5
+  let h = canvas.height * 0.5
+  dt.x = x - w
+  dt.y = y - h
 }
 
 // get color from theme, return default if not found
