@@ -95,7 +95,7 @@ h1, h2, h3, h4 {
   background: #080E07;
 }
 #tree_canvas{
-  
+
 }
 
 /* Navigation tabs */
@@ -222,4 +222,11 @@ select{
 }
 #num_convert_b{
   background-color: #aaa;
+}
+
+/* Garden */
+#controls input{
+  margin-left: 4px;
+  margin-right: 8px;
+  width: 64px;
 }

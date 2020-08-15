@@ -31,15 +31,35 @@ export default class Garden{
     this.game.ctx.scale(1, 1)
     this.game.ctx.setTransform(1,0,0,1,0,0)
   }
+
+  reset(){
+    let params = {
+      'height': 120,
+      'branches': 12,
+      'thicc': 16,
+      'bend': 0.02,
+      'slant': 0.03,
+      'leaf_size': 8,
+      'min_leaf_level': 11
+    }
+    let _params = this.game.get_params()
+    Object.entries(_params).forEach(([k,v])=>{
+      params[k] = v
+    })
+    let tree = new Tree(this.game.ctx, params)
+    this.trees = {
+      'chestnut': tree
+    }
+    this.game.draw()
+  }
 }
 
 class Tree{
-  constructor(ctx, options){
+  constructor(ctx, params){
     this.ctx = ctx
-    Object.entries(options).forEach(([key,value])=>{
+    Object.entries(params).forEach(([key,value])=>{
       this[key] = value
     })
-    console.log(this)
     this.splits = Math.floor(this.height/this.branches)
     this.reset()
   }
@@ -49,6 +69,17 @@ class Tree{
   }
 
   grow(angle=Math.PI*0.5, slant=0, x=0, y=0, t=0, max_t=this.height){
+    let new_growth = this._grow(angle,slant,x,y,t,max_t)
+    while(new_growth.length > 0){
+      let g = new_growth.pop()
+      let n = this._grow(g[0],g[1],g[2],g[3],g[4],g[5])
+      new_growth.push(...n)
+    }
+  }
+
+  // grows and returns an array of new growth
+  _grow(angle=Math.PI*0.5, slant=0, x=0, y=0, t=0, max_t=this.height){
+    let new_growth = []
     let thicc = Math.floor(map_range_exp([0,this.height],[this.thicc,1],t,0.1))
     this.ctx.fillRect(Math.round(x), Math.round(y), thicc, thicc)
     if (t<max_t){
@@ -62,17 +93,18 @@ class Tree{
         let b = this.rand_bend()
         let s = this.rand_slant()
         max_t -= Math.floor(Math.random()*10)
-        this.grow(angle+b, s, x, y, t+1, max_t)
-        this.grow(angle-b, -s, x, y, t+1, max_t)
+        new_growth.push([angle+b, s, x, y, t+1, max_t])
+        new_growth.push([angle-b, -s, x, y, t+1, max_t])
         if ((t/this.splits)>this.min_leaf_level){
           this.leaves.push([x, y, t/this.height])
         }
       }else{
-        this.grow(angle, slant, x, y, t+1, max_t)
+        new_growth.push([angle, slant, x, y, t+1, max_t])
       }
     }else{
       this.leaves.push([x, y, 1])
     }
+    return new_growth
   }
 
   draw_leaves(){
