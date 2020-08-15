@@ -68,8 +68,8 @@ class Tree{
     this.leaves = []
   }
 
-  grow(angle=Math.PI*0.5, slant=0, x=0, y=0, t=0, max_t=this.height){
-    let new_growth = this._grow(angle,slant,x,y,t,max_t)
+  grow(){
+    let new_growth = this._grow(Math.PI*0.5,0,0,0,0,this.height)
     while(new_growth.length > 0){
       let g = new_growth.pop()
       let n = this._grow(g[0],g[1],g[2],g[3],g[4],g[5])
@@ -81,7 +81,7 @@ class Tree{
   _grow(angle=Math.PI*0.5, slant=0, x=0, y=0, t=0, max_t=this.height){
     let new_growth = []
     let thicc = Math.floor(map_range_exp([0,this.height],[this.thicc,1],t,0.1))
-    this.ctx.fillRect(Math.round(x), Math.round(y), thicc, thicc)
+    this.ctx.fillRect(Math.round(x-thicc*0.5), Math.round(y), thicc, thicc)
     if (t<max_t){
       x += Math.cos(angle)
       y -= Math.sin(angle)
