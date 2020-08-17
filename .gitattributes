@@ -2,6 +2,7 @@
 
 # Graphics
 *.ai              binary
+*.kra             binary
 *.bmp             binary
 *.eps             binary
 *.gif             binary
