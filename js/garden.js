@@ -2,6 +2,7 @@ export default class Garden{
   constructor(game){
     this.game = game
     this.scale = 4
+    this.seed = 'test'
     this.trees = {
       'chestnut': new Tree(this.game.ctx, {
         'height': 120,
@@ -15,6 +16,15 @@ export default class Garden{
     }
   }
 
+  // Grow all the life in this garden
+  grow(){
+    Math.seedrandom(this.seed)
+    Object.values(this.trees).forEach((tree)=>{
+      tree.reset()
+      tree.grow()
+    })
+  }
+
   draw(){
     this.game.ctx.imageSmoothingEnabled = false
     let s = this.scale
@@ -24,9 +34,8 @@ export default class Garden{
     this.game.ctx.translate(ox, oy)
     Object.values(this.trees).forEach((tree)=>{
       tree.reset()
-      this.game.ctx.fillStyle = '#AA471F'
       tree.grow()
-      tree.draw_leaves()
+      tree.draw()
     })
     this.game.ctx.scale(1, 1)
     this.game.ctx.setTransform(1,0,0,1,0,0)
@@ -57,6 +66,7 @@ export default class Garden{
 class Tree{
   constructor(ctx, params){
     this.ctx = ctx
+    this.pixels = []
     Object.entries(params).forEach(([key,value])=>{
       this[key] = value
     })
@@ -65,7 +75,15 @@ class Tree{
   }
 
   reset(){
+    this.pixels = []
     this.leaves = []
+  }
+
+  draw(){
+    this.pixels.forEach((p) => {
+      this.ctx.fillStyle = p[3]
+      this.ctx.fillRect(p[0], p[1], p[2], p[2])
+    })
   }
 
   grow(){
@@ -75,13 +93,20 @@ class Tree{
       let n = this._grow(g[0],g[1],g[2],g[3],g[4],g[5])
       new_growth.push(...n)
     }
+    this.grow_leaves()
   }
 
   // grows and returns an array of new growth
   _grow(angle=Math.PI*0.5, slant=0, x=0, y=0, t=0, max_t=this.height){
     let new_growth = []
     let thicc = Math.floor(map_range_exp([0,this.height],[this.thicc,1],t,0.1))
-    this.ctx.fillRect(Math.round(x-thicc*0.5), Math.round(y), thicc, thicc)
+    let color = darken('#AA471F', Math.random()*20)
+    this.pixels.push([
+      Math.round(x-thicc*0.5),  // x
+      Math.round(y),             // y
+      thicc,                     // size
+      color                      // color
+    ])
     if (t<max_t){
       x += Math.cos(angle)
       y -= Math.sin(angle)
@@ -107,17 +132,45 @@ class Tree{
     return new_growth
   }
 
-  draw_leaves(){
+  grow_leaves(){
     this.leaves.forEach((leaf)=>{
-      this.ctx.fillStyle = darken('#47AA1F', Math.random()*20)
       let size = Math.ceil(this.leaf_size * leaf[2] * Math.random())
       if (size < 1) size = 1
-      this.draw_leaf(this.ctx, leaf[0], leaf[1], size)
+      let color = darken('#47AA1F', Math.random()*20)
+      this.grow_leaf(leaf[0], leaf[1], size, color)
     })
   }
 
-  draw_leaf(ctx, x, y, size){
-    fill_circle(ctx, x, y, size)
+  grow_leaf(x, y, size, color){
+    let new_leaves = this._grow_leaf(x,y,size,color)
+    let drawn_pixels = new Set()
+    while(new_leaves.length > 0){
+      let leaf = new_leaves.pop()
+      let pos = leaf[0]+','+leaf[1]
+      if (!drawn_pixels.has(pos)){
+        drawn_pixels.add(pos)
+        let n = this._grow_leaf(leaf[0],leaf[1],leaf[2],leaf[3])
+        new_leaves.push(...n)
+      }
+    }
+  }
+
+  _grow_leaf(x,y,size,color){
+    let new_leaves = []
+    this.pixels.push([x,y,1,color])
+    size--
+    if (size < 1) return []
+    if (Math.random() > 0.75)
+      color = darken('#47AA1F', Math.random()*20)
+    if(Math.random() > 0.3)
+      new_leaves.push([x+1, y, size, color])
+    if(Math.random() > 0.3)
+      new_leaves.push([x, y+1, size, color])
+    if(Math.random() > 0.3)
+      new_leaves.push([x-1, y, size, color])
+    if(Math.random() > 0.3)
+      new_leaves.push([x, y-1, size, color])
+    return new_leaves
   }
 
   rand_bend(){
