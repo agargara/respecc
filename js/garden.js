@@ -1,3 +1,17 @@
+const leaf_palette = [
+  '#4ec054',
+  '#2d9848',
+  '#176e13',
+  '#03501e',
+  '#012618',
+]
+const trunk_palette = [
+  '#a6792e',
+  '#8e5737',
+  '#4f2e03',
+  '#271305'
+]
+
 const default_tree_params = {
   'height': 120,
   'branches': 8,
@@ -8,6 +22,28 @@ const default_tree_params = {
   'min_leaf_level': 3,
   'seed': 0
 }
+
+class Palette{
+  constructor(colors, idx){
+    this.colors = colors
+    this.idx = idx
+  }
+
+  get_color(){
+    let n = this.colors.length
+    let c = this.colors[ping_pong_mod(this.idx, n)]
+    return c
+  }
+
+  randshift(rand){
+    let r = rand.quick()
+    if (r>0.5)
+      this.idx++
+    else
+      this.idx--
+  }
+}
+
 export default class Garden{
   constructor(game){
     this.game = game
@@ -52,13 +88,20 @@ class Tree{
   reset(){
     this.pixels = []
     this.leaves = []
+    this.trunk_palette = new Palette(trunk_palette, trunk_palette.length)
     this.rand = new Math.seedrandom(this.seed)
   }
 
   draw(){
     this.pixels.forEach((p) => {
-      this.ctx.fillStyle = p[3]
-      this.ctx.fillRect(p[0], p[1], p[2], p[2])
+      let color = p[4]
+      for (let i=0; i<p[2]; i++){
+        for (let j=0; j<p[3]; j++){
+          this.ctx.fillStyle = color
+          this.ctx.fillRect(p[0]+i, p[1]+j, 1, 1)
+        }
+        color = darken(color, 20)
+      }
     })
   }
 
@@ -76,13 +119,11 @@ class Tree{
   _grow(angle=Math.PI*0.5, slant=0, x=0, y=0, t=0, max_t=this.height){
     let new_growth = []
     let thicc = Math.floor(map_range_exp([0,this.height],[this.thicc,1],t,0.1))
-    let color = darken('#AA471F', this.rand.quick()*20)
-    this.pixels.push([
-      Math.round(x-thicc*0.5),  // x
-      Math.round(y),             // y
-      thicc,                     // size
-      color                      // color
-    ])
+    let px = Math.round(x-thicc*0.5)
+    let py = Math.round(y)
+    this.pixels.push([px, py, thicc, 1, this.trunk_palette.get_color()])
+    if(this.rand.quick() > 0.75)
+      this.trunk_palette.randshift(this.rand)
     if (t<max_t){
       x += Math.cos(angle)
       y -= Math.sin(angle)
@@ -112,13 +153,14 @@ class Tree{
     this.leaves.forEach((leaf)=>{
       let size = Math.ceil(this.leaf_size * leaf[2] * this.rand.quick())
       if (size < 1) size = 1
-      let color = darken('#47AA1F', this.rand.quick()*20)
-      this.grow_leaf(leaf[0], leaf[1], size, color)
+      //let color = darken(leafcolor, this.rand.quick()*20)
+      let palette = new Palette(leaf_palette, 2)
+      this.grow_leaf(leaf[0], leaf[1], size, palette)
     })
   }
 
-  grow_leaf(x, y, size, color){
-    let new_leaves = this._grow_leaf(x,y,size,color)
+  grow_leaf(x, y, size, palette){
+    let new_leaves = this._grow_leaf(x,y,size,palette)
     let drawn_pixels = new Set()
     while(new_leaves.length > 0){
       let leaf = new_leaves.pop()
@@ -131,21 +173,22 @@ class Tree{
     }
   }
 
-  _grow_leaf(x,y,size,color){
+  _grow_leaf(x,y,size,palette){
     let new_leaves = []
-    this.pixels.push([Math.round(x),Math.round(y),1,color])
+    this.pixels.push([Math.round(x),Math.round(y),1,1,palette.get_color()])
     size--
     if (size < 1) return []
-    if (this.rand.quick() > 0.75)
-      color = darken('#47AA1F', this.rand.quick()*20)
+    let r = this.rand.quick()
+    if (r > 0.75)
+      palette.randshift(this.rand)
     if(this.rand.quick() > 0.3)
-      new_leaves.push([x+1, y, size, color])
+      new_leaves.push([x+1, y, size, palette])
     if(this.rand.quick() > 0.3)
-      new_leaves.push([x, y+1, size, color])
+      new_leaves.push([x, y+1, size, palette])
     if(this.rand.quick() > 0.3)
-      new_leaves.push([x-1, y, size, color])
+      new_leaves.push([x-1, y, size, palette])
     if(this.rand.quick() > 0.3)
-      new_leaves.push([x, y-1, size, color])
+      new_leaves.push([x, y-1, size, palette])
     return new_leaves
   }
 
@@ -242,4 +285,12 @@ function darken(colorCode, amount) {
   }
 
   return (usePound ? '#' : '') + (g | (b << 8) | (r << 16)).toString(16)
+}
+
+function ping_pong_mod(i, n){
+  let cycle = 2 * n
+  i = ((i%cycle)+cycle)%cycle
+  if (i >= n)
+    return cycle - 1 - i
+  return i
 }

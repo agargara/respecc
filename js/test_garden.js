@@ -20,7 +20,7 @@ window.onload = function(){
 }
 
 game.draw = function(){
-  game.ctx.fillStyle = '#87ceeb'
+  game.ctx.fillStyle = '#2da4b6'
   game.ctx.fillRect(0, 0, game.canvas.width, game.canvas.height)
   game.garden.draw()
   //requestAnimationFrame((time)=>{draw(time)})
