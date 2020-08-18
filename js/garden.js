@@ -11,47 +11,31 @@ const default_tree_params = {
 export default class Garden{
   constructor(game){
     this.game = game
-    this.scale = 4
-    this.trees = {
-      'chestnut': new Tree(this.game.ctx, default_tree_params)
-    }
+    this.grow()
   }
 
-  // Grow all the life in this garden
   grow(){
+    let params = Object.assign({},default_tree_params)
+    let _params = this.game.get_params()
+    Object.entries(_params).forEach(([k,v])=>{
+      params[k] = v
+    })
+    this.trees = {
+      'chestnut': new Tree(this.game.ctx, params)
+    }
     Object.values(this.trees).forEach((tree)=>{
-      tree.reset()
       tree.grow()
     })
   }
 
   draw(){
     this.game.ctx.imageSmoothingEnabled = false
-    let s = this.scale
-    let ox = (this.game.canvas.width * 0.5)/s
-    let oy = this.game.canvas.height/s
-    this.game.ctx.scale(s, s)
+    let ox = Math.floor((this.game.canvas.width * 0.5))
+    let oy = Math.floor(this.game.canvas.height)
     this.game.ctx.translate(ox, oy)
     Object.values(this.trees).forEach((tree)=>{
-      tree.reset()
-      tree.grow()
       tree.draw()
     })
-    this.game.ctx.scale(1, 1)
-    this.game.ctx.setTransform(1,0,0,1,0,0)
-  }
-
-  reset(){
-    let params = Object.assign({},default_tree_params)
-    let _params = this.game.get_params()
-    Object.entries(_params).forEach(([k,v])=>{
-      params[k] = v
-    })
-    let tree = new Tree(this.game.ctx, params)
-    this.trees = {
-      'chestnut': tree
-    }
-    this.game.draw()
   }
 }
 
@@ -149,7 +133,7 @@ class Tree{
 
   _grow_leaf(x,y,size,color){
     let new_leaves = []
-    this.pixels.push([x,y,1,color])
+    this.pixels.push([Math.round(x),Math.round(y),1,color])
     size--
     if (size < 1) return []
     if (this.rand.quick() > 0.75)

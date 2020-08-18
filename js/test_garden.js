@@ -1,7 +1,7 @@
 import Garden from './garden.js'
 
 var game = {}
-
+var scale = 4
 window.onload = function(){
   game.canvas = document.getElementById('garden_canvas')
   game.ctx = game.canvas.getContext('2d')
@@ -16,7 +16,7 @@ window.onload = function(){
   add_control('seed', 0, 0, 128)
   resize() // resize canvas based on viewport
   window.addEventListener('resize', resize)
-  window.addEventListener('keydown', game.draw)
+  window.addEventListener('keydown', resize)
 }
 
 game.draw = function(){
@@ -27,10 +27,8 @@ game.draw = function(){
 }
 
 function resize(){
-  let vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0)
-  let vh = Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0)
-  game.canvas.width  = vw*0.8 - 2 // subtract 2 for border
-  game.canvas.height = vh*0.8 - 2
+  game.canvas.width  = Math.floor(game.canvas.offsetWidth*(1/scale))
+  game.canvas.height = Math.floor(game.canvas.offsetHeight*(1/scale))
   game.draw()
 }
 
@@ -47,7 +45,10 @@ function add_control(param,defaultValue,min,max,step=1){
   control.setAttribute('max', max)
   control.setAttribute('step', step)
   control.setAttribute('id', param)
-  control.addEventListener('change', ()=>{game.garden.reset()})
+  control.addEventListener('change', ()=>{
+    game.garden.grow()
+    resize()
+  })
   let controls = document.getElementById('controls')
   controls.appendChild(label)
   controls.appendChild(control)
