@@ -4,13 +4,13 @@ export default class Garden{
     this.scale = 4
     this.trees = {
       'chestnut': new Tree(this.game.ctx, {
-        'height': 120,
-        'branches': 12,
-        'thicc': 16,
+        'height': 100,
+        'branches': 7,
+        'thicc': 64,
         'bend': 0.02,
-        'slant': 0.03,
-        'leaf_size': 8,
-        'min_leaf_level': 11
+        'slant': 0.06,
+        'leaf_size': 12,
+        'min_leaf_level': 4
       })
     }
   }
