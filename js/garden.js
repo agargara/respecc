@@ -1,24 +1,24 @@
+const default_tree_params = {
+  'height': 120,
+  'branches': 8,
+  'thicc': 48,
+  'bend': 0.02,
+  'slant': 0.03,
+  'leaf_size': 32,
+  'min_leaf_level': 3,
+  'seed': 0
+}
 export default class Garden{
   constructor(game){
     this.game = game
     this.scale = 4
-    this.seed = 'test'
     this.trees = {
-      'chestnut': new Tree(this.game.ctx, {
-        'height': 120,
-        'branches': 12,
-        'thicc': 16,
-        'bend': 0.02,
-        'slant': 0.03,
-        'leaf_size': 8,
-        'min_leaf_level': 11
-      })
+      'chestnut': new Tree(this.game.ctx, default_tree_params)
     }
   }
 
   // Grow all the life in this garden
   grow(){
-    Math.seedrandom(this.seed)
     Object.values(this.trees).forEach((tree)=>{
       tree.reset()
       tree.grow()
@@ -42,15 +42,7 @@ export default class Garden{
   }
 
   reset(){
-    let params = {
-      'height': 120,
-      'branches': 12,
-      'thicc': 16,
-      'bend': 0.02,
-      'slant': 0.03,
-      'leaf_size': 8,
-      'min_leaf_level': 11
-    }
+    let params = Object.assign({},default_tree_params)
     let _params = this.game.get_params()
     Object.entries(_params).forEach(([k,v])=>{
       params[k] = v
@@ -66,7 +58,6 @@ export default class Garden{
 class Tree{
   constructor(ctx, params){
     this.ctx = ctx
-    this.pixels = []
     Object.entries(params).forEach(([key,value])=>{
       this[key] = value
     })
@@ -77,6 +68,7 @@ class Tree{
   reset(){
     this.pixels = []
     this.leaves = []
+    this.rand = new Math.seedrandom(this.seed)
   }
 
   draw(){
@@ -100,7 +92,7 @@ class Tree{
   _grow(angle=Math.PI*0.5, slant=0, x=0, y=0, t=0, max_t=this.height){
     let new_growth = []
     let thicc = Math.floor(map_range_exp([0,this.height],[this.thicc,1],t,0.1))
-    let color = darken('#AA471F', Math.random()*20)
+    let color = darken('#AA471F', this.rand.quick()*20)
     this.pixels.push([
       Math.round(x-thicc*0.5),  // x
       Math.round(y),             // y
@@ -117,7 +109,7 @@ class Tree{
       if (t%this.splits == 0){
         let b = this.rand_bend()
         let s = this.rand_slant()
-        max_t -= Math.floor(Math.random()*10)
+        max_t -= Math.floor(this.rand.quick()*10)
         new_growth.push([angle+b, s, x, y, t+1, max_t])
         new_growth.push([angle-b, -s, x, y, t+1, max_t])
         if ((t/this.splits)>this.min_leaf_level){
@@ -134,9 +126,9 @@ class Tree{
 
   grow_leaves(){
     this.leaves.forEach((leaf)=>{
-      let size = Math.ceil(this.leaf_size * leaf[2] * Math.random())
+      let size = Math.ceil(this.leaf_size * leaf[2] * this.rand.quick())
       if (size < 1) size = 1
-      let color = darken('#47AA1F', Math.random()*20)
+      let color = darken('#47AA1F', this.rand.quick()*20)
       this.grow_leaf(leaf[0], leaf[1], size, color)
     })
   }
@@ -160,27 +152,27 @@ class Tree{
     this.pixels.push([x,y,1,color])
     size--
     if (size < 1) return []
-    if (Math.random() > 0.75)
-      color = darken('#47AA1F', Math.random()*20)
-    if(Math.random() > 0.3)
+    if (this.rand.quick() > 0.75)
+      color = darken('#47AA1F', this.rand.quick()*20)
+    if(this.rand.quick() > 0.3)
       new_leaves.push([x+1, y, size, color])
-    if(Math.random() > 0.3)
+    if(this.rand.quick() > 0.3)
       new_leaves.push([x, y+1, size, color])
-    if(Math.random() > 0.3)
+    if(this.rand.quick() > 0.3)
       new_leaves.push([x-1, y, size, color])
-    if(Math.random() > 0.3)
+    if(this.rand.quick() > 0.3)
       new_leaves.push([x, y-1, size, color])
     return new_leaves
   }
 
   rand_bend(){
     let b = this.bend*0.2
-    return (Math.random() * b) + (this.bend-b)
+    return (this.rand.quick() * b) + (this.bend-b)
   }
 
   rand_slant(){
     let s = this.slant*0.8
-    return (Math.random() * s) + (this.slant-s)
+    return (this.rand.quick() * s) + (this.slant-s)
   }
 }
 
@@ -192,12 +184,6 @@ function map_range_exp(from, to, n, pow){
 
 function map_range(from, to, n) {
   return to[0] + (n - from[0]) * (to[1] - to[0]) / (from[1] - from[0])
-}
-
-function rand_int(min, max){
-  max = Math.ceil(max)
-  min = Math.floor(min)
-  return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
 function fill_circle(ctx, cx, cy, radius){
