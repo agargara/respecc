@@ -31,7 +31,8 @@ class Palette{
 
   get_color(){
     let n = this.colors.length
-    let c = this.colors[ping_pong_mod(this.idx, n)]
+    this.idx = ping_pong_mod(this.idx, n)
+    let c = this.colors[this.idx]
     return c
   }
 
@@ -41,6 +42,14 @@ class Palette{
       this.idx++
     else
       this.idx--
+  }
+
+  darkify(rand){
+    if (rand.quick() > 0.75)
+      return
+    let n = this.colors.length
+    this.idx = ping_pong_mod(this.idx, n)
+    this.idx++
   }
 }
 
@@ -88,20 +97,14 @@ class Tree{
   reset(){
     this.pixels = []
     this.leaves = []
-    this.trunk_palette = new Palette(trunk_palette, trunk_palette.length)
+    this.trunk_palette = new Palette(trunk_palette, trunk_palette.length-1)
     this.rand = new Math.seedrandom(this.seed)
   }
 
   draw(){
     this.pixels.forEach((p) => {
-      let color = p[4]
-      for (let i=0; i<p[2]; i++){
-        for (let j=0; j<p[3]; j++){
-          this.ctx.fillStyle = color
-          this.ctx.fillRect(p[0]+i, p[1]+j, 1, 1)
-        }
-        color = darken(color, 20)
-      }
+      this.ctx.fillStyle = p[4]
+      this.ctx.fillRect(p[0], p[1], p[2], p[3])
     })
   }
 
@@ -117,42 +120,76 @@ class Tree{
 
   // grows and returns an array of new growth
   _grow(angle=Math.PI*0.5, slant=0, x=0, y=0, t=0, max_t=this.height){
-    let new_growth = []
-    let thicc = Math.floor(map_range_exp([0,this.height],[this.thicc,1],t,0.1))
-    let px = Math.round(x-thicc*0.5)
-    let py = Math.round(y)
-    this.pixels.push([px, py, thicc, 1, this.trunk_palette.get_color()])
+    // reached max height: add leaves and return
+    if (t>max_t){
+      this.leaves.push([x, y, 1])
+      return []
+    }
+    // calculate trunk thickness based on current height
+    let thicc = Math.floor(map_range_exp([-1,this.height],[this.thicc,1],t,0.1))
+
+    // get color
+    if (t < max_t*0.1) // bottom 10% of tree is dark
+      this.trunk_palette.darkify(this.rand)
+    let color = this.trunk_palette.get_color()
+
+    // draw a thicc line perpendicular to angle
+    let perpendicular = angle+(Math.PI*0.5)
+    let dx = Math.cos(perpendicular)
+    let dy = Math.sin(perpendicular)
+    let px = Math.round(x), py = Math.round(y)
+    let ox=0, oy=0 // offsets
+    while (thicc > 0){
+      // Fill in all surrounding pixels
+      let oxs = new Set([Math.ceil(ox),Math.floor(ox)])
+      let oys = new Set([Math.ceil(oy),Math.floor(oy)])
+      oxs.forEach((ox)=>{
+        oys.forEach((oy)=>{
+          this.pixels.push([px+ox, py+oy, 1, 1, color])
+          this.pixels.push([px-ox, py-oy, 1, 1, color])
+        })
+      })
+      // Randomly change the shade
+      if (this.rand.quick() > 0.75)
+        color = darken(color, (this.rand.quick()*10)-20)
+      ox += dx
+      oy -= dy
+      thicc--
+    }
+
+    // randomly shift to new color in palette
     if(this.rand.quick() > 0.75)
       this.trunk_palette.randshift(this.rand)
-    if (t<max_t){
-      x += Math.cos(angle)
-      y -= Math.sin(angle)
-      angle += slant
-      if (angle > Math.PI || angle < -Math.PI*0.5){
-        slant *= -1
-      }
-      if (t%this.splits == 0){
-        let b = this.rand_bend()
-        let s = this.rand_slant()
-        max_t -= Math.floor(this.rand.quick()*10)
-        new_growth.push([angle+b, s, x, y, t+1, max_t])
-        new_growth.push([angle-b, -s, x, y, t+1, max_t])
-        if ((t/this.splits)>this.min_leaf_level){
-          this.leaves.push([x, y, t/this.height])
-        }
-      }else{
-        new_growth.push([angle, slant, x, y, t+1, max_t])
+
+    // calculate new growth
+    let new_growth = []
+    x += Math.cos(angle)
+    y -= Math.sin(angle)
+    angle += slant
+    if (angle > Math.PI || angle < -Math.PI*0.5){
+      slant *= -1
+    }
+    if (t%this.splits == 0){
+      let b = this.rand_bend()
+      let s = this.rand_slant()
+      max_t -= Math.floor(this.rand.quick()*10)
+      new_growth.push([angle+b, s, x, y, t+1, max_t])
+      new_growth.push([angle-b, -s, x, y, t+1, max_t])
+      if ((t/this.splits)>this.min_leaf_level){
+        let size = Math.round(t/this.height)
+        if (size > 0)
+          this.leaves.push([x, y, size])
       }
     }else{
-      this.leaves.push([x, y, 1])
+      new_growth.push([angle, slant, x, y, t+1, max_t])
     }
     return new_growth
   }
 
   grow_leaves(){
     this.leaves.forEach((leaf)=>{
-      let size = Math.ceil(this.leaf_size * leaf[2] * this.rand.quick())
-      if (size < 1) size = 1
+      let size = Math.round(this.leaf_size * leaf[2] * this.rand.quick())
+      if (size < 1) return
       //let color = darken(leafcolor, this.rand.quick()*20)
       let palette = new Palette(leaf_palette, 2)
       this.grow_leaf(leaf[0], leaf[1], size, palette)
