@@ -189,7 +189,7 @@ export default class Character {
       return 'deactivated'
   }
 
-  // called when loading save file
+  // called when loading save file or switching characters
   reactivate_nodes(){
     if (!this.nodes_to_activate) return
     this.nodes_to_activate.forEach((nodeid) => {

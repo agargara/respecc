@@ -58,6 +58,10 @@ import Draw from './draw.js'
 import Animate from './animate.js'
 import {get_string, random_name} from './strings.js'
 import {options} from './options.js'
+const chara_classes = [
+  'Arborist',
+  'Horticulturalist'
+]
 
 var game = {}
 window.game = game // allow console access for easy debugging
@@ -279,7 +283,8 @@ function save(){
       'start_node': chara.start_node,
       'color': chara.color,
       'classy': chara.classy,
-      'level': chara.level
+      'level': chara.level,
+      'name': chara.name
     }
   })
   localStorage.setItem('save',JSON.stringify(save))
@@ -288,7 +293,8 @@ function save(){
 }
 
 function current_character(){
-  return characters[game.state.current_character]
+  let classy = chara_classes[game.state.current_character%chara_classes.length]
+  return characters[classy]
 }
 game.current_character = current_character
 
@@ -309,7 +315,7 @@ function respec(){
   })
   update_hud()
   // redraw tree
-  game.tree.clear()
+  game.tree.redraw_all()
   game.dontsave = false
 }
 
@@ -456,6 +462,10 @@ function handle_keyboard_input(){
   if (keys_pressed[' ']){
     current_character().purchase()
   }
+  // tab: switch character
+  if (keys_pressed['q']){
+    game.cycle_character(1)
+  }
 }
 
 // Handle movement with wasd keys.
@@ -594,7 +604,6 @@ game.new_character_dialog = function(classy){
   let d = document.getElementById('new_character_dialog')
   document.getElementById('chara_error').innerHTML = ''
   document.getElementById('new_chara_class').innerHTML = classy
-  console.log(classy)
   let defaultname = get_string('default_names', classy, game.options.lang)
   document.getElementById('new_chara_name').placeholder = defaultname
   d.classList.remove('hidden')
@@ -614,19 +623,41 @@ game.new_character = function(){
   let classy = document.getElementById('new_chara_class').innerHTML
   let color = game.get_color('characters', classy)
   game.characters[classy] = new Character(game, classy, 0, color, name)
-  game.state.current_character = classy
+  game.state.current_character = 0
   let d = document.getElementById('new_character_dialog')
   d.classList.add('hidden')
   update_hud()
   // redraw tree
-  game.tree.reset_nodes()
+  game.reset_tree()
   nodes[0].selected = true
-  game.tree.clear()
   game.pan(0,0)
-  game.dontsave = false
   // resolve promise
   if (game.create_character)
     game.create_character()
+}
+game.reset_tree = function(){
+  game.tree.reset_nodes()
+  for (let [nodeid, node] of current_character().activated_nodes){
+    node.status = 'activated'
+  }
+  let cn = game.nodes[current_character().current_node]
+  cn.selected = true
+  game.pan(cn.pos[0],cn.pos[1],true)
+  game.tree.redraw_all()
+  game.dontsave = false
+}
+game.cycle_character = function(n=1){
+  let old_idx = game.state.current_character
+  game.state.current_character += n
+  while(current_character()==undefined){
+    game.state.current_character++
+  }
+  game.state.current_character %= chara_classes.length
+  // new character?
+  if (old_idx != game.state.current_character){
+    game.reset_tree()
+    update_hud()
+  }
 }
 function validate_name(name){
   if (!name) throw('Empty')
@@ -853,10 +884,11 @@ game.autopan = function(){
 }
 game.pan = function(x,y){
   let dt = game.display_transform
+  let [rx,ry] = game.gridpos_to_realpos([x,y])
   let w = canvas.width * 0.5
   let h = canvas.height * 0.5
-  dt.x = x - w
-  dt.y = y - h
+  dt.x = rx - w
+  dt.y = ry - h
 }
 
 // get color from theme, return default if not found

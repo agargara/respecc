@@ -1130,7 +1130,7 @@ export default class Tree{
     return canvas
   }
 
-  clear(){
+  redraw_all(){
     this.canvases.forEach((i)=>{
       i.forEach((j)=>{
         let ctx = j.getContext('2d')
